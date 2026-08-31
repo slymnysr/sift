@@ -45,7 +45,7 @@ sonraki faza geçilmez.
 | 1 | Yakalama | komutu kendi çalıştır, ham baytları sakla, byte-exact `peek` | bitti — [01-YAKALAMA.md](01-YAKALAMA.md) |
 | 2 | Model köprüsü | NVIDIA NIM istemcisi, **basamaklı** model (ultra→super→lightning), zaman aşımı, yeniden deneme | bitti — [02-MODEL-KOPRUSU.md](02-MODEL-KOPRUSU.md) |
 | 3 | Damıtma çekirdeği | numaralanmış satır → model → **yalnız numara** → yerel metin | bitti — [03-DAMITMA.md](03-DAMITMA.md) |
-| 4 | Güvenlik ağı | model yokken determinist yedek; fail-open her yolda kanıtlanır |
+| 4 | Güvenlik ağı | model yokken determinist yedek; fail-open her yolda kanıtlanır | bitti — [04-GUVENLIK-AGI.md](04-GUVENLIK-AGI.md) |
 | 5 | Dil bağımsızlığı | dünya dilleri + yazılım dilleri korpusu, ölçüm |
 | 6 | Dosya taslağı | herhangi dilde bildirim çıkarımı (regex ailesi YOK) |
 | 7 | MCP sunucusu | araçlar, kayıt, istemciye bağlanma |

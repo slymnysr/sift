@@ -130,10 +130,22 @@ def test_the_shell_is_available_but_never_the_default():
     assert cap.text().split() == ["bir", "iki"]
 
 
-def test_an_unknown_handle_reads_as_absent_rather_than_crashing():
+def test_a_handle_that_was_never_captured_is_not_an_empty_capture():
+    """Two things that look identical on screen and mean opposite things.
+
+    An empty capture is a command that said nothing. A missing handle is a
+    question about something that is not here -- usually a typo, or a capture
+    made under a different SIFT_HOME. Answering the second with the first sends
+    someone looking for a bug in their command.
+
+    An interrupted run is a third case and is not this one: its bytes exist, so
+    they are still handed back. Only the claims about them are missing.
+    """
     assert store.load("yokboyle") is None
-    assert store.read_raw("yokboyle") == b""
-    assert peek("yokboyle").total_lines == 0
+    with pytest.raises(FileNotFoundError):
+        store.read_raw("yokboyle")
+    with pytest.raises(FileNotFoundError):
+        peek("yokboyle")
 
 
 def test_the_raw_file_holds_the_bytes_and_nothing_added_to_them():

@@ -236,9 +236,98 @@ MUTATIONS = [
     ),
     Mutation(
         "distill.py",
+        "a gap is written the way the README says it is written",
+        '    return f"─ {count:,} {word} not shown · sift peek {handle} for any of them ─"',
+        '    return f"─ {count} {word} not shown · sift peek {handle} for any of them ─"',
+    ),
+    Mutation(
+        "distill.py",
         "the view is built from the capture and from nothing else",
         "        text=render(lines, chosen, capture.handle),",
         "        text=render(lines, chosen, capture.handle) + answer.text,",
+    ),
+    # -- Faz 4: the safety net -----------------------------------------------
+    Mutation(
+        "fallback.py",
+        "the ends are shown, and no claim is made about the middle",
+        "    return set(range(1, head + 1)) | set(range(total - tail + 1, total + 1))",
+        "    return set(range(1, head + tail + 1))",
+    ),
+    Mutation(
+        "fallback.py",
+        "a capture shorter than the ends asked for is shown whole",
+        "    if total <= head + tail:\n        return set(range(1, total + 1))\n",
+        "    if False:\n        return set(range(1, total + 1))\n",
+    ),
+    Mutation(
+        "fallback.py",
+        "a run that failed gets more of its ending",
+        "    tail = TAIL_WHEN_FAILED if capture.meta.failed else TAIL",
+        "    tail = TAIL",
+    ),
+    Mutation(
+        "fallback.py",
+        "a view nobody chose does not claim a model chose it",
+        "        model=None,",
+        '        model="fallback",',
+    ),
+    Mutation(
+        "store.py",
+        "a handle that was never captured is not an empty capture",
+        '        raise FileNotFoundError(f"no capture named {handle!r}")',
+        '        return b""',
+    ),
+    Mutation(
+        "cli.py",
+        "the command's own exit code comes back out",
+        "    return capture.meta.exit_code or 0",
+        "    return 0",
+    ),
+    Mutation(
+        "cli.py",
+        "a run stopped for taking too long is reported the way a shell reports it",
+        "    if capture.meta.timed_out:\n        return TIMED_OUT\n",
+        "    if False:\n        return TIMED_OUT\n",
+    ),
+    Mutation(
+        "cli.py",
+        "a bug in the distiller costs the view and nothing else",
+        "    except Exception as exc:  # a bug here must not cost the user their output",
+        "    except ValueError as exc:  # a bug here must not cost the user their output",
+    ),
+    Mutation(
+        "cli.py",
+        "a command that cannot be run is reported, not raised at the user",
+        "    except OSError as exc:\n"
+        '        print(f"sift: {exc}", file=sys.stderr)\n'
+        "        return CANNOT_RUN\n",
+        "    except ValueError as exc:\n"
+        '        print(f"sift: {exc}", file=sys.stderr)\n'
+        "        return CANNOT_RUN\n",
+    ),
+    Mutation(
+        "cli.py",
+        "the view goes to stdout and the note about it goes to stderr",
+        "    print(_footer(capture, view, who), file=sys.stderr)",
+        "    print(_footer(capture, view, who))",
+    ),
+    Mutation(
+        "cli.py",
+        "when everything that chooses lines fails, every line is shown",
+        "    except Exception as exc:  # the view is optional; the output is not",
+        "    except ValueError as exc:  # the view is optional; the output is not",
+    ),
+    Mutation(
+        "cli.py",
+        "the last resort shows the capture rather than announcing it",
+        "        sys.stdout.write(capture.text())",
+        '        sys.stdout.write("")',
+    ),
+    Mutation(
+        "cli.py",
+        "a flag is only a flag at the front, before the command begins",
+        '        if args[0] == "--timeout" and len(args) > 1:',
+        '        if "--timeout" in args and len(args) > 1:',
     ),
 ]
 

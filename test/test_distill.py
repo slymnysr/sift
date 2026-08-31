@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -206,6 +207,16 @@ def test_a_single_hidden_line_is_counted_in_the_singular():
 def test_hidden_lines_are_written_with_thousands_marked():
     view = d.distill(_lines(4000), _Judge("4000"))
     assert "─ 3,999 lines not shown" in view.text
+
+
+def test_the_readme_shows_the_marker_this_code_actually_writes():
+    """Documentation that cannot drift: the example in the README is generated here.
+
+    A format string and a README are two places to say the same thing, and one
+    of them is never run. This makes the unread one fail out loud.
+    """
+    readme = (Path(__file__).resolve().parent.parent / "README.md").read_text("utf-8")
+    assert d.gap(3_914, "9f2c41ab") in readme
 
 
 def test_the_gaps_account_for_every_line_that_is_not_shown():

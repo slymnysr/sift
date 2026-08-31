@@ -15,7 +15,7 @@ rest is marked, not deleted.
 $ sift run -- pytest
 FAILED test/test_auth.py::test_expired_token - assert 401 == 200
   ...
-─ 3,914 lines not shown · sift peek a3f1 for any of them ─
+─ 3,914 lines not shown · sift peek 9f2c41ab for any of them ─
 === 1 failed, 212 passed in 18.4s ===
 ```
 

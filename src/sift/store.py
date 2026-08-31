@@ -122,9 +122,18 @@ def load(handle: str) -> Meta | None:
 
 
 def read_raw(handle: str) -> bytes:
-    """Every byte the command wrote, exactly as it wrote them."""
+    """Every byte the command wrote, exactly as it wrote them.
+
+    A handle that was never captured raises rather than reading as empty. The
+    two look identical on screen -- nothing -- and they mean opposite things:
+    "the command said nothing" against "you are asking about something that is
+    not here". Silently answering the first when asked the second sends someone
+    looking for a bug in their command.
+    """
     p = raw_path(handle)
-    return p.read_bytes() if p.is_file() else b""
+    if not p.is_file():
+        raise FileNotFoundError(f"no capture named {handle!r}")
+    return p.read_bytes()
 
 
 def recent(limit: int = 20) -> list[Meta]:
