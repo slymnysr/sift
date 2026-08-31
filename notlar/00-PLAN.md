@@ -39,10 +39,10 @@ Bunlar tasarımın omurgası. Hiçbir faz bunları esnetmez.
 Her faz kendi başına çalışır durumda biter ve kendi testleri yeşil olmadan
 sonraki faza geçilmez.
 
-| # | Faz | Ne biter |
-|---|-----|----------|
-| 0 | İskelet | paket, `notlar/`+`test/`, pyproject, CI, ilk yeşil test |
-| 1 | Yakalama | komutu kendi çalıştır, ham baytları sakla, byte-exact `peek` |
+| # | Faz | Ne biter | Durum |
+|---|-----|----------|---|
+| 0 | İskelet | paket, `notlar/`+`test/`, pyproject, CI, ilk yeşil test | bitti |
+| 1 | Yakalama | komutu kendi çalıştır, ham baytları sakla, byte-exact `peek` | bitti — [01-YAKALAMA.md](01-YAKALAMA.md) |
 | 2 | Model köprüsü | NVIDIA NIM istemcisi, **basamaklı** model (ultra→super→lightning), zaman aşımı, yeniden deneme |
 | 3 | Damıtma çekirdeği | numaralanmış satır → model → **yalnız numara** → yerel metin |
 | 4 | Güvenlik ağı | model yokken determinist yedek; fail-open her yolda kanıtlanır |

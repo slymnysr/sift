@@ -1,0 +1,141 @@
+"""Where a capture lives after the command has finished.
+
+The store is the reason `sift` can promise that nothing is thrown away. Whatever
+the command wrote goes to disk first, exactly as it arrived, and every view
+built later is a *selection over this file* rather than a replacement for it.
+Deciding what matters is a judgement and judgements are wrong sometimes; the
+cost of being wrong has to stay at one line of a view, never at a lost byte.
+
+Layout, one directory per capture:
+
+    $SIFT_HOME/captures/<handle>/raw       the bytes, untouched
+    $SIFT_HOME/captures/<handle>/meta.json what was run, how it ended
+
+`raw` is opened in binary and never rewritten. `meta.json` is written once the
+command has finished, which also makes it the marker for a complete capture: a
+directory with `raw` but no `meta.json` is a run that was interrupted.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import time
+from dataclasses import asdict, dataclass
+from pathlib import Path
+
+_HANDLE_LENGTH = 8
+
+
+def home() -> Path:
+    """The root under which captures are kept.
+
+    Read from the environment on every call rather than cached at import, so a
+    test can point it somewhere temporary without reloading the module.
+    """
+    if os.environ.get("SIFT_HOME"):
+        return Path(os.environ["SIFT_HOME"]).expanduser()
+    base = os.environ.get("XDG_CACHE_HOME") or (Path.home() / ".cache")
+    return Path(base).expanduser() / "sift"
+
+
+def captures_dir() -> Path:
+    return home() / "captures"
+
+
+@dataclass(frozen=True)
+class Meta:
+    """What a capture knows about itself once the command has stopped."""
+
+    handle: str
+    command: list[str]
+    shell: bool
+    exit_code: int | None
+    timed_out: bool
+    started_at: float
+    duration_s: float
+    byte_count: int
+    cwd: str
+
+    @property
+    def failed(self) -> bool:
+        """True when the command did not end cleanly.
+
+        A timeout counts as failure even though it has no exit code, because to
+        anyone reading the output it is the same event: the thing did not work.
+        """
+        return self.timed_out or self.exit_code not in (0, None)
+
+
+def new_handle(command: list[str], started_at: float) -> str:
+    """A short, unique name for one run.
+
+    Content-hashing the command would collide the moment the same command is run
+    twice, which is the common case, so the clock and the process take part. The
+    handle is typed by hand into `sift peek`, so it is kept short.
+    """
+    import hashlib
+
+    seed = f"{started_at!r}|{os.getpid()}|{' '.join(command)}"
+    return hashlib.sha256(seed.encode("utf-8", "replace")).hexdigest()[:_HANDLE_LENGTH]
+
+
+def raw_path(handle: str) -> Path:
+    return captures_dir() / handle / "raw"
+
+
+def meta_path(handle: str) -> Path:
+    return captures_dir() / handle / "meta.json"
+
+
+def begin(handle: str) -> Path:
+    """Make room for a capture and hand back the file to write bytes into."""
+    d = captures_dir() / handle
+    d.mkdir(parents=True, exist_ok=True)
+    return d / "raw"
+
+
+def finish(meta: Meta) -> None:
+    """Record how the run ended. Writing this file is what marks it complete."""
+    meta_path(meta.handle).write_text(
+        json.dumps(asdict(meta), ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+
+
+def load(handle: str) -> Meta | None:
+    """The metadata for a finished capture, or None if there is no such capture.
+
+    An interrupted run -- bytes on disk, no `meta.json` -- reads as absent here,
+    while `read_raw` will still hand back what it managed to write. That split is
+    deliberate: the bytes are always worth keeping, the claims about them are not
+    worth making up.
+    """
+    p = meta_path(handle)
+    if not p.is_file():
+        return None
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    fields = {f for f in Meta.__dataclass_fields__}
+    return Meta(**{k: v for k, v in data.items() if k in fields})
+
+
+def read_raw(handle: str) -> bytes:
+    """Every byte the command wrote, exactly as it wrote them."""
+    p = raw_path(handle)
+    return p.read_bytes() if p.is_file() else b""
+
+
+def recent(limit: int = 20) -> list[Meta]:
+    """Finished captures, newest first."""
+    d = captures_dir()
+    if not d.is_dir():
+        return []
+    metas = [m for m in (load(p.name) for p in d.iterdir() if p.is_dir()) if m is not None]
+    metas.sort(key=lambda m: m.started_at, reverse=True)
+    return metas[:limit]
+
+
+def now() -> float:
+    return time.time()
