@@ -1,0 +1,40 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    # Windows is here on purpose. `capture.py` takes a different path there --
+    # no process groups, no selector on a pipe -- and a path nobody runs is a
+    # path nobody knows about.
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install
+        run: uv sync --all-extras --dev
+
+      - name: Lint
+        run: uv run ruff check src test
+
+      - name: Test
+        # SIFT_LIVE is deliberately unset: the suite must not depend on a key or
+        # a network. The one test that calls NVIDIA skips itself without it.
+        run: uv run pytest -q --no-header
