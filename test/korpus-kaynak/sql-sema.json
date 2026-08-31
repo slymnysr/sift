@@ -1,0 +1,33 @@
+{
+  "tool": "sql",
+  "language": "sql",
+  "script": "latin",
+  "failed": false,
+  "kind": "source",
+  "family": "declarative",
+  "lines": 37,
+  "must_show": [
+    3,
+    10,
+    17,
+    19,
+    21,
+    27,
+    34
+  ],
+  "noise": [
+    [
+      22,
+      25
+    ],
+    [
+      29,
+      31
+    ],
+    [
+      35,
+      37
+    ]
+  ],
+  "note": "SQL DDL: tablo, indeks, gorunum, tetikleyici ve fonksiyon bildirimleri."
+}

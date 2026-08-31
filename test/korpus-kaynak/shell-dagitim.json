@@ -1,0 +1,47 @@
+{
+  "tool": "shell",
+  "language": "shell",
+  "script": "latin",
+  "failed": false,
+  "kind": "source",
+  "family": "functions",
+  "lines": 40,
+  "must_show": [
+    4,
+    5,
+    6,
+    8,
+    13,
+    17,
+    23,
+    30,
+    34
+  ],
+  "noise": [
+    [
+      9,
+      9
+    ],
+    [
+      14,
+      14
+    ],
+    [
+      18,
+      20
+    ],
+    [
+      24,
+      27
+    ],
+    [
+      31,
+      31
+    ],
+    [
+      35,
+      37
+    ]
+  ],
+  "note": "POSIX kabuk: degisken atamalari, fonksiyon bildirimleri, trap."
+}

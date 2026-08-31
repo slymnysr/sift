@@ -1,0 +1,40 @@
+{
+  "tool": "python",
+  "language": "python",
+  "script": "latin",
+  "failed": false,
+  "kind": "source",
+  "family": "indent",
+  "lines": 46,
+  "must_show": [
+    10,
+    16,
+    19,
+    23,
+    27,
+    39
+  ],
+  "noise": [
+    [
+      20,
+      21
+    ],
+    [
+      24,
+      25
+    ],
+    [
+      28,
+      33
+    ],
+    [
+      35,
+      37
+    ],
+    [
+      40,
+      46
+    ]
+  ],
+  "note": "Python: dekorator, dataclass, async metot, ic fonksiyon."
+}

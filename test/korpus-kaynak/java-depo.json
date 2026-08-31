@@ -1,0 +1,46 @@
+{
+  "tool": "java",
+  "language": "java",
+  "script": "latin",
+  "failed": false,
+  "kind": "source",
+  "family": "braces",
+  "lines": 48,
+  "must_show": [
+    10,
+    14,
+    19,
+    24,
+    30,
+    35,
+    39,
+    44
+  ],
+  "noise": [
+    [
+      15,
+      15
+    ],
+    [
+      20,
+      20
+    ],
+    [
+      25,
+      26
+    ],
+    [
+      31,
+      32
+    ],
+    [
+      40,
+      41
+    ],
+    [
+      45,
+      45
+    ]
+  ],
+  "note": "Java: paket, anotasyonlu sinif, jenerik imza, ic sinif."
+}

@@ -1,0 +1,42 @@
+use std::collections::HashMap;
+use std::fmt;
+
+/// Satir bazli saklanan seyrek matris.
+pub struct Matris {
+    satirlar: usize,
+    sutunlar: usize,
+    hucreler: HashMap<(usize, usize), f64>,
+}
+
+impl Matris {
+    pub fn yeni(satirlar: usize, sutunlar: usize) -> Self {
+        Matris {
+            satirlar,
+            sutunlar,
+            hucreler: HashMap::new(),
+        }
+    }
+
+    pub fn koy(&mut self, satir: usize, sutun: usize, deger: f64) {
+        if deger == 0.0 {
+            self.hucreler.remove(&(satir, sutun));
+            return;
+        }
+        self.hucreler.insert((satir, sutun), deger);
+    }
+
+    pub fn al(&self, satir: usize, sutun: usize) -> f64 {
+        *self.hucreler.get(&(satir, sutun)).unwrap_or(&0.0)
+    }
+
+    pub fn yogunluk(&self) -> f64 {
+        let toplam = (self.satirlar * self.sutunlar) as f64;
+        self.hucreler.len() as f64 / toplam
+    }
+}
+
+impl fmt::Display for Matris {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}x{} ({} dolu)", self.satirlar, self.sutunlar, self.hucreler.len())
+    }
+}

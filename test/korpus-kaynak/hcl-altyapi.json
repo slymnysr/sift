@@ -1,0 +1,20 @@
+{
+  "tool": "hcl",
+  "language": "hcl",
+  "script": "latin",
+  "failed": false,
+  "kind": "source",
+  "family": "declarative",
+  "lines": 44,
+  "must_show": [
+    1,
+    12,
+    16,
+    22,
+    26,
+    34,
+    42
+  ],
+  "noise": [],
+  "note": "Terraform HCL: terraform/provider/resource/variable/output blok basliklari."
+}

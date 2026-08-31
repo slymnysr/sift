@@ -27,18 +27,24 @@ from sift import lines as text_lines
 from sift.capture import Capture
 from sift.model import Bridge
 
+# Every question asked through `select` is answered the same way, because one
+# parser reads every answer. It is kept apart from the questions so that adding a
+# second question cannot quietly add a second format for the reply.
+ANSWER_FORMAT = (
+    "\n"
+    "Answer with line numbers only: single numbers or ranges, separated by commas.\n"
+    "For example: 1, 40-47, 512\n"
+    "Write nothing else. Do not explain, do not quote any line, do not repeat the "
+    "text. Only numbers."
+)
+
 QUESTION = (
     "You are given the numbered output of a command someone just ran.\n"
     "Choose the lines a person debugging this would need to see: what failed, "
     "what warned, what changed, the final result, and the few lines around them "
     "that make those readable.\n"
     "Leave out repetition, progress that only says work happened, and lines that "
-    "carry no information on their own.\n"
-    "\n"
-    "Answer with line numbers only: single numbers or ranges, separated by commas.\n"
-    "For example: 1, 40-47, 512\n"
-    "Write nothing else. Do not explain, do not quote any line, do not repeat the "
-    "output. Only numbers."
+    "carry no information on their own.\n" + ANSWER_FORMAT
 )
 
 # One ask covers this much of the transcript. Most captures fit in a single one;
@@ -137,17 +143,28 @@ def render(lines: list[str], chosen: set[int], handle: str) -> str:
     return "\n".join(pieces)
 
 
-def distill(capture: Capture, bridge: Bridge | None = None) -> View | None:
-    """Ask which lines matter, then show those lines from the capture.
+def select(
+    lines: list[str],
+    question: str,
+    handle: str,
+    bridge: Bridge | None = None,
+) -> View | None:
+    """Ask one question about numbered lines, and show the ones it answers with.
+
+    The question is an argument because nothing underneath it is about failures.
+    Numbering the lines, cutting a long text into asks that keep their original
+    numbering, reading numbers out of a reply and discarding the rest, printing
+    from the source byte for byte -- none of that changes when the question
+    changes from *what went wrong here* to *what is declared here*. Only the
+    sentence changes, and a second sentence is not a second engine.
 
     Returns nothing when there is no usable judgement -- no key, no model that
     would answer, or an answer with no numbers in it. The caller decides what to
     do with that; falling back is not this function's business, and pretending to
     have judged would be worse than admitting it did not.
     """
-    lines = text_lines.of(capture.text())
     if not lines:
-        return View(capture.handle, "", 0, 0, None, 0)
+        return View(handle, "", 0, 0, None, 0)
 
     judge = bridge if bridge is not None else Bridge()
     chosen: set[int] = set()
@@ -155,7 +172,7 @@ def distill(capture: Capture, bridge: Bridge | None = None) -> View | None:
     asks = 0
 
     for first, window in _windows(lines):
-        answer = judge.ask(QUESTION, numbered(window, first), max_tokens=2048)
+        answer = judge.ask(question, numbered(window, first), max_tokens=2048)
         asks += 1
         if answer is None:
             continue
@@ -165,13 +182,18 @@ def distill(capture: Capture, bridge: Bridge | None = None) -> View | None:
     if not chosen:
         return None
     return View(
-        handle=capture.handle,
-        text=render(lines, chosen, capture.handle),
+        handle=handle,
+        text=render(lines, chosen, handle),
         kept=len(chosen),
         total=len(lines),
         model=model,
         asks=asks,
     )
+
+
+def distill(capture: Capture, bridge: Bridge | None = None) -> View | None:
+    """Ask which lines of a capture matter, then show those lines from it."""
+    return select(text_lines.of(capture.text()), QUESTION, capture.handle, bridge)
 
 
 def _windows(lines: list[str]) -> list[tuple[int, list[str]]]:

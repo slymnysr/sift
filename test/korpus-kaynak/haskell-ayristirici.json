@@ -1,0 +1,37 @@
+{
+  "tool": "haskell",
+  "language": "haskell",
+  "script": "latin",
+  "failed": false,
+  "kind": "source",
+  "family": "equations",
+  "lines": 44,
+  "must_show": [
+    3,
+    11,
+    19,
+    22,
+    32,
+    37,
+    43
+  ],
+  "noise": [
+    [
+      23,
+      30
+    ],
+    [
+      33,
+      35
+    ],
+    [
+      38,
+      41
+    ],
+    [
+      44,
+      44
+    ]
+  ],
+  "note": "Haskell: modul basligi, tip imzalari, data, sinif ornekleri."
+}

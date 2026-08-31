@@ -1,0 +1,38 @@
+{
+  "tool": "go",
+  "language": "go",
+  "script": "latin",
+  "failed": false,
+  "kind": "source",
+  "family": "braces",
+  "lines": 50,
+  "must_show": [
+    8,
+    10,
+    15,
+    20,
+    25,
+    29,
+    35,
+    46
+  ],
+  "noise": [
+    [
+      26,
+      26
+    ],
+    [
+      30,
+      32
+    ],
+    [
+      36,
+      43
+    ],
+    [
+      47,
+      49
+    ]
+  ],
+  "note": "Go: type/func/method, alici parantezli imza, arayuz bildirimi."
+}

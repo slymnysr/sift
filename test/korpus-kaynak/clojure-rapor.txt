@@ -1,0 +1,31 @@
+(ns rapor.ozet
+  (:require [clojure.string :as str]
+            [clojure.set :as set]))
+
+(def ^:private varsayilan-esik 0.8)
+
+(defprotocol Ozetlenebilir
+  (ozetle [this] "Tek satirlik ozet dondurur.")
+  (agirlik [this] "Siralama icin sayisal agirlik."))
+
+(defrecord Olcum [ad deger birim]
+  Ozetlenebilir
+  (ozetle [this] (str (:ad this) ": " (:deger this) (:birim this)))
+  (agirlik [this] (:deger this)))
+
+(defn- normalize
+  [degerler]
+  (let [en-buyuk (apply max degerler)]
+    (map #(/ % en-buyuk) degerler)))
+
+(defn ustler
+  "Esigi asan olcumleri agirliga gore sirali dondurur."
+  ([olcumler] (ustler olcumler varsayilan-esik))
+  ([olcumler esik]
+   (->> olcumler
+        (filter #(> (agirlik %) esik))
+        (sort-by agirlik >))))
+
+(defn rapor-yaz
+  [olcumler]
+  (str/join "\n" (map ozetle (ustler olcumler))))

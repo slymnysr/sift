@@ -1,0 +1,37 @@
+-- Siparis semasi, surum 4.
+
+CREATE TABLE musteri (
+    kimlik      BIGSERIAL PRIMARY KEY,
+    ad          TEXT NOT NULL,
+    eposta      TEXT NOT NULL UNIQUE,
+    olusturuldu TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE siparis (
+    kimlik      BIGSERIAL PRIMARY KEY,
+    musteri_id  BIGINT NOT NULL REFERENCES musteri(kimlik),
+    tutar       NUMERIC(12,2) NOT NULL CHECK (tutar >= 0),
+    durum       TEXT NOT NULL DEFAULT 'bekliyor'
+);
+
+CREATE INDEX siparis_musteri_idx ON siparis (musteri_id);
+
+CREATE INDEX siparis_durum_idx ON siparis (durum) WHERE durum <> 'kapandi';
+
+CREATE VIEW acik_siparisler AS
+SELECT s.kimlik, m.ad, s.tutar
+FROM siparis s
+JOIN musteri m ON m.kimlik = s.musteri_id
+WHERE s.durum <> 'kapandi';
+
+CREATE FUNCTION siparis_toplami(p_musteri BIGINT)
+RETURNS NUMERIC AS $$
+    SELECT COALESCE(sum(tutar), 0)
+    FROM siparis
+    WHERE musteri_id = p_musteri;
+$$ LANGUAGE sql STABLE;
+
+CREATE TRIGGER siparis_guncellendi
+    BEFORE UPDATE ON siparis
+    FOR EACH ROW
+    EXECUTE FUNCTION zaman_damgala();

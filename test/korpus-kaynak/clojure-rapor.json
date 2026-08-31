@@ -1,0 +1,39 @@
+{
+  "tool": "clojure",
+  "language": "clojure",
+  "script": "latin",
+  "failed": false,
+  "kind": "source",
+  "family": "parens",
+  "lines": 31,
+  "must_show": [
+    1,
+    5,
+    7,
+    8,
+    9,
+    11,
+    16,
+    21,
+    29
+  ],
+  "noise": [
+    [
+      13,
+      14
+    ],
+    [
+      17,
+      19
+    ],
+    [
+      22,
+      27
+    ],
+    [
+      30,
+      31
+    ]
+  ],
+  "note": "Clojure: ns, def/defn/defn-, defrecord ve protokol."
+}

@@ -47,6 +47,30 @@ def ends(total: int, *, head: int = HEAD, tail: int = TAIL) -> set[int]:
     return set(range(1, head + 1)) | set(range(total - tail + 1, total + 1))
 
 
+def from_lines(lines: list[str], handle: str, *, tail: int = TAIL) -> View:
+    """The ends of any numbered text, marked with what lies between them.
+
+    A source file gets the same treatment as a capture, and for the same reason:
+    the moment this function starts telling the two apart it has begun keeping a
+    list of what things are, which is the list this project was rewritten to be
+    rid of. The beginning and the end of a file are a poor outline. They are not
+    a wrong one.
+    """
+    total = len(lines)
+    if not total:
+        return View(handle, "", 0, 0, None, 0)
+
+    chosen = ends(total, head=HEAD, tail=tail)
+    return View(
+        handle=handle,
+        text=render(lines, chosen, handle),
+        kept=len(chosen),
+        total=total,
+        model=None,
+        asks=0,
+    )
+
+
 def fallback(capture: Capture) -> View:
     """A view built without asking anything, and honest about being one.
 
@@ -54,18 +78,5 @@ def fallback(capture: Capture) -> View:
     view a model chose. A reader who is told which lines were picked, and by
     what, can decide whether to go and read the rest.
     """
-    lines = text_lines.of(capture.text())
-    total = len(lines)
-    if not total:
-        return View(capture.handle, "", 0, 0, None, 0)
-
     tail = TAIL_WHEN_FAILED if capture.meta.failed else TAIL
-    chosen = ends(total, head=HEAD, tail=tail)
-    return View(
-        handle=capture.handle,
-        text=render(lines, chosen, capture.handle),
-        kept=len(chosen),
-        total=total,
-        model=None,
-        asks=0,
-    )
+    return from_lines(text_lines.of(capture.text()), capture.handle, tail=tail)

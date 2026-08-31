@@ -243,8 +243,8 @@ MUTATIONS = [
     Mutation(
         "distill.py",
         "the view is built from the capture and from nothing else",
-        "        text=render(lines, chosen, capture.handle),",
-        "        text=render(lines, chosen, capture.handle) + answer.text,",
+        "        text=render(lines, chosen, handle),",
+        "        text=render(lines, chosen, handle) + answer.text,",
     ),
     # -- Faz 4: the safety net -----------------------------------------------
     Mutation(
@@ -353,6 +353,44 @@ MUTATIONS = [
         "a capture is read as bytes, so nothing rewrites its line endings",
         "    return p.read_bytes()",
         '    return p.read_text(encoding="utf-8", errors="replace").encode("utf-8")',
+    ),
+    # -- Faz 6: what a file declares, without a table of languages -----------
+    Mutation(
+        "outline.py",
+        "a file is read as bytes, so nothing rewrites its line endings",
+        '    return text_lines.of(Path(path).read_bytes().decode("utf-8", errors="replace"))',
+        '    return text_lines.of(Path(path).read_text(errors="replace"))',
+    ),
+    Mutation(
+        "outline.py",
+        "the outline is asked about the file and never about its name",
+        "    return select(read(path), QUESTION, str(path), bridge)",
+        "    return select([str(path), *read(path)], QUESTION, str(path), bridge)",
+    ),
+    Mutation(
+        "distill.py",
+        "the question put to the model is the one the caller asked",
+        "        answer = judge.ask(question, numbered(window, first), max_tokens=2048)",
+        "        answer = judge.ask(QUESTION, numbered(window, first), max_tokens=2048)",
+    ),
+    Mutation(
+        "peek.py",
+        "a capture is answered by the store, whatever the working directory holds",
+        "    try:\n        return store.read_raw(handle)\n    except FileNotFoundError:\n",
+        "    found = Path(handle)\n    if found.is_file():\n        return found.read_bytes()\n"
+        "    try:\n        return store.read_raw(handle)\n    except FileNotFoundError:\n",
+    ),
+    Mutation(
+        "cli.py",
+        "a file that cannot be read is reported, not raised at the user",
+        "    except OSError as exc:  # the file itself cannot be read; there is no view",
+        "    except ValueError as exc:  # the file itself cannot be read; there is no view",
+    ),
+    Mutation(
+        "cli.py",
+        "an outline nobody chose falls to the ends of the file, not to an error",
+        '    return ends_of(path), f"no model ({reason})"',
+        "    raise RuntimeError(reason)",
     ),
 ]
 

@@ -1,0 +1,44 @@
+{-# LANGUAGE OverloadedStrings #-}
+
+module Ayristirici
+  ( Belirtec(..)
+  , ayristir
+  , degerlendir
+  ) where
+
+import Data.Char (isDigit, isSpace)
+
+data Belirtec
+  = Sayi Double
+  | Arti
+  | Carpi
+  | AcParan
+  | KapaParan
+  deriving (Show, Eq)
+
+newtype Hata = Hata String
+  deriving (Show)
+
+belirtecle :: String -> [Belirtec]
+belirtecle [] = []
+belirtecle (c:cs)
+  | isSpace c = belirtecle cs
+  | isDigit c = let (sayi, kalan) = span isDigit (c:cs)
+                in Sayi (read sayi) : belirtecle kalan
+  | c == '+'  = Arti : belirtecle cs
+  | c == '*'  = Carpi : belirtecle cs
+  | otherwise = error ("taninmayan: " ++ [c])
+
+ayristir :: String -> Either Hata [Belirtec]
+ayristir metin
+  | null metin = Left (Hata "bos girdi")
+  | otherwise  = Right (belirtecle metin)
+
+degerlendir :: [Belirtec] -> Double
+degerlendir = foldl adim 0
+  where
+    adim toplam (Sayi n) = toplam + n
+    adim toplam _        = toplam
+
+instance Semigroup Hata where
+  Hata a <> Hata b = Hata (a ++ "; " ++ b)

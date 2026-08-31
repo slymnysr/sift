@@ -33,10 +33,11 @@ def _run(code: str, *before: str) -> list[str]:
 # -- the shape of the interface --------------------------------------------
 
 
-def test_no_arguments_explains_the_three_commands(capsys):
+def test_no_arguments_explains_every_command(capsys):
     assert cli.main([]) == 0
     said = capsys.readouterr().out
     assert "sift run" in said
+    assert "sift outline" in said
     assert "sift peek" in said
     assert "sift list" in said
 

@@ -6,7 +6,8 @@ newline -- and a progress bar that redraws itself would arrive as a hundred
 lines that were never in the file. `sift` reads captures as bytes for exactly
 that reason, and a corpus that measures `sift` has to be read the same way.
 
-A sample is a pair of files with the same stem in `test/korpus/`:
+A sample is a pair of files with the same stem, under one of two roots:
+`test/korpus/` holds command output, `test/korpus-kaynak/` holds source files.
 
     <name>.txt    the output of a command, exactly as it was written
     <name>.json   what is known about it
@@ -21,6 +22,13 @@ The labels are:
     must_show   the lines a view is wrong without
     noise       ranges that could all be folded away and cost nothing
     note        why this sample is in the corpus
+    kind        "log" for command output, "source" for a file to be outlined
+    family      for source: how the language says a thing begins
+
+Both roots keep every sample under a `.txt` name, whatever language it is in.
+That is not tidiness. `sift outline` is not allowed to know one language from
+another, and a corpus where every Rust sample were called `.rs` could never
+prove it, because a suffix table would score just as well.
 
 Lines that are in neither list are context: helpful, not required, not
 penalised. Keeping `must_show` small is deliberate. Demanding that an underline
@@ -38,6 +46,7 @@ from sift import store
 from sift.capture import Capture
 
 KORPUS = Path(__file__).parent / "korpus"
+KAYNAK = Path(__file__).parent / "korpus-kaynak"
 
 
 @dataclass(frozen=True)
@@ -53,6 +62,8 @@ class Sample:
     must_show: tuple[int, ...]
     noise: frozenset[int]
     note: str
+    kind: str = "log"
+    family: str = ""
 
     @property
     def total(self) -> int:
@@ -62,9 +73,9 @@ class Sample:
         return self.body[number - 1]
 
 
-def load(name: str) -> Sample:
-    label = json.loads((KORPUS / f"{name}.json").read_bytes().decode("utf-8"))
-    text = (KORPUS / f"{name}.txt").read_bytes().decode("utf-8")
+def load(name: str, root: Path = KORPUS) -> Sample:
+    label = json.loads((root / f"{name}.json").read_bytes().decode("utf-8"))
+    text = (root / f"{name}.txt").read_bytes().decode("utf-8")
     noise: set[int] = set()
     for start, end in label["noise"]:
         noise.update(range(start, end + 1))
@@ -80,15 +91,22 @@ def load(name: str) -> Sample:
         must_show=tuple(label["must_show"]),
         noise=frozenset(noise),
         note=label["note"],
+        kind=label.get("kind", "log"),
+        family=label.get("family", ""),
     )
 
 
-def names() -> list[str]:
-    return sorted(p.stem for p in KORPUS.glob("*.json"))
+def names(root: Path = KORPUS) -> list[str]:
+    return sorted(p.stem for p in root.glob("*.json"))
 
 
-def every() -> list[Sample]:
-    return [load(name) for name in names()]
+def every(root: Path = KORPUS) -> list[Sample]:
+    return [load(name, root) for name in names(root)]
+
+
+def path_of(sample: Sample, root: Path = KAYNAK) -> Path:
+    """Where a source sample actually sits, for the tools that take a path."""
+    return root / f"{sample.name}.txt"
 
 
 def as_capture(sample: Sample) -> Capture:

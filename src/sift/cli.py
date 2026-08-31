@@ -1,11 +1,16 @@
 """The command line: run something, read what mattered, go and read the rest.
 
-Three commands and no more, because each one is a promise that has to keep
+Four commands and no more, because each one is a promise that has to keep
 working in every language and every shell:
 
     sift run -- pytest -q          run it, show the lines that mattered
+    sift outline src/parser.rs     what a file declares, without its bodies
     sift peek a3f1 200 260         the capture itself, byte for byte
     sift list                      what has been run lately
+
+`outline` is the same machine asking a different question. Nothing in it knows
+one language from another, and there is no list of suffixes deciding what it
+will look at: the command word already said what you wanted.
 
 The arguments are read by hand rather than with `argparse`. This is not
 stubbornness: `sift run -- pytest -x --lf` hands `sift` a command that has flags
@@ -29,12 +34,14 @@ from sift.capture import Capture, run
 from sift.distill import View, distill
 from sift.fallback import fallback
 from sift.model import Bridge
+from sift.outline import ends_of, outline
 from sift.peek import peek
 
 USAGE = """sift -- run a command, keep every byte, show the lines that matter
 
   sift run [--timeout SECONDS] [--shell] [--] COMMAND...
-  sift peek HANDLE [FIRST] [LAST]
+  sift outline PATH
+  sift peek HANDLE|PATH [FIRST] [LAST]
   sift list [COUNT]
 
 Everything after COMMAND is passed to it unchanged. Use -- when the command
@@ -57,6 +64,8 @@ def main(argv: list[str] | None = None) -> int:
     word, rest = args[0], args[1:]
     if word == "run":
         return _run(rest)
+    if word == "outline":
+        return _outline(rest)
     if word == "peek":
         return _peek(rest)
     if word == "list":
@@ -174,6 +183,49 @@ def _exit_code(capture: Capture) -> int:
     if capture.meta.timed_out:
         return TIMED_OUT
     return capture.meta.exit_code or 0
+
+
+def _outline(args: list[str]) -> int:
+    if not args:
+        print(f"sift: outline needs a path\n\n{USAGE}", file=sys.stderr)
+        return 2
+
+    path = args[0]
+    try:
+        view, who = _outline_view(path)
+    except OSError as exc:  # the file itself cannot be read; there is no view
+        print(f"sift: {exc}", file=sys.stderr)
+        return 1
+
+    if view.text:
+        print(view.text)
+    print(
+        f"sift {path} · {view.kept:,}/{view.total:,} lines · {who}",
+        file=sys.stderr,
+    )
+    return 0
+
+
+def _outline_view(path: str) -> tuple[View, str]:
+    """The best outline available, and a word about where it came from.
+
+    Shaped like `_view` and for the same reason: every way of failing to ask a
+    model ends at the ends of the file rather than at an error. The one failure
+    that is allowed through is the file being unreadable, because then there is
+    nothing to show and saying so is the only honest answer.
+    """
+    bridge = Bridge()
+    reason = "no model"
+    try:
+        chosen = outline(path, bridge)
+        if chosen is not None:
+            return chosen, chosen.model or "model"
+        reason = bridge.last_error or "no lines chosen"
+    except OSError:
+        raise
+    except Exception as exc:  # a bug here must not cost the user their outline
+        reason = f"{type(exc).__name__}: {exc}"
+    return ends_of(path), f"no model ({reason})"
 
 
 def _peek(args: list[str]) -> int:

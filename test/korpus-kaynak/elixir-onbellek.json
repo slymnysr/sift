@@ -1,0 +1,46 @@
+{
+  "tool": "elixir",
+  "language": "elixir",
+  "script": "latin",
+  "failed": false,
+  "kind": "source",
+  "family": "end",
+  "lines": 40,
+  "must_show": [
+    8,
+    10,
+    14,
+    18,
+    23,
+    28,
+    33,
+    38
+  ],
+  "noise": [
+    [
+      11,
+      11
+    ],
+    [
+      15,
+      15
+    ],
+    [
+      19,
+      19
+    ],
+    [
+      24,
+      24
+    ],
+    [
+      29,
+      29
+    ],
+    [
+      34,
+      35
+    ]
+  ],
+  "note": "Elixir: defmodule/def/defp, GenServer geri cagirimlari, desen eslesmeli imza."
+}

@@ -1,0 +1,48 @@
+{
+  "tool": "ruby",
+  "language": "ruby",
+  "script": "latin",
+  "failed": false,
+  "kind": "source",
+  "family": "end",
+  "lines": 37,
+  "must_show": [
+    5,
+    6,
+    8,
+    9,
+    11,
+    16,
+    21,
+    25,
+    29,
+    33
+  ],
+  "noise": [
+    [
+      12,
+      13
+    ],
+    [
+      17,
+      18
+    ],
+    [
+      22,
+      22
+    ],
+    [
+      26,
+      26
+    ],
+    [
+      30,
+      30
+    ],
+    [
+      34,
+      34
+    ]
+  ],
+  "note": "Ruby: module/class/def, attr_reader, self. metodu, blok."
+}

@@ -1,0 +1,37 @@
+# frozen_string_literal: true
+
+require "bigdecimal"
+
+module Muhasebe
+  KDV_ORANI = BigDecimal("0.20")
+
+  class Fatura
+    attr_reader :kalemler, :musteri
+
+    def initialize(musteri)
+      @musteri = musteri
+      @kalemler = []
+    end
+
+    def ekle(ad, tutar, adet: 1)
+      @kalemler << { ad: ad, tutar: BigDecimal(tutar.to_s), adet: adet }
+      self
+    end
+
+    def ara_toplam
+      @kalemler.sum { |kalem| kalem[:tutar] * kalem[:adet] }
+    end
+
+    def genel_toplam
+      ara_toplam * (1 + KDV_ORANI)
+    end
+
+    def self.bos?(fatura)
+      fatura.kalemler.empty?
+    end
+
+    def to_s
+      format("%s: %.2f TL", @musteri, genel_toplam)
+    end
+  end
+end

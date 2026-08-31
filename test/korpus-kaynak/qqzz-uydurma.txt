@@ -1,0 +1,35 @@
+~ olcum agi surum 2 ~
+
+tanim Dugum <ad: yazi, agirlik: sayi>
+  baslangicta agirlik := 1
+  kural agirlik >= 0
+son tanim
+
+tanim Kenar <bas: Dugum, son: Dugum, maliyet: sayi>
+  kural maliyet > 0
+son tanim
+
+islem topla(agir: liste<Dugum>) -> sayi
+  toplam := 0
+  her d icinde agir yap
+    toplam := toplam + d.agirlik
+  bitir
+  ver toplam
+son islem
+
+islem enkisa(bas: Dugum, son: Dugum) -> liste<Kenar>
+  gorulen := bos kume
+  sira := yeni oncelikkuyrugu
+  sira.koy(bas, 0)
+  dongu sira bos degilken
+    su := sira.al()
+    eger su = son ise ver yol(su) bitir
+  bitir
+  ver bos liste
+son islem
+
+sabit VARSAYILAN_MALIYET = 1
+
+olay dugum_eklendi(d: Dugum)
+  yaz "eklendi: " + d.ad
+son olay

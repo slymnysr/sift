@@ -1,0 +1,40 @@
+{
+  "tool": "qqzz",
+  "language": "qqzz",
+  "script": "latin",
+  "failed": false,
+  "kind": "source",
+  "family": "invented",
+  "lines": 35,
+  "must_show": [
+    3,
+    8,
+    12,
+    20,
+    31,
+    33
+  ],
+  "noise": [
+    [
+      4,
+      5
+    ],
+    [
+      9,
+      9
+    ],
+    [
+      13,
+      17
+    ],
+    [
+      21,
+      28
+    ],
+    [
+      34,
+      34
+    ]
+  ],
+  "note": "Hicbir tablonun icinde olamayacak uydurma dil: bildirimi yalniz yapisi belli eder."
+}

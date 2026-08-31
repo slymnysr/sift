@@ -1,0 +1,27 @@
+# Yapi kurallari.
+
+CC      := clang
+CFLAGS  := -O2 -Wall -Wextra -std=c17
+KAYNAK  := $(wildcard src/*.c)
+NESNE   := $(KAYNAK:.c=.o)
+CIKTI   := build/olcer
+
+.PHONY: hepsi temiz kur test
+
+hepsi: $(CIKTI)
+
+$(CIKTI): $(NESNE)
+	@mkdir -p build
+	$(CC) $(CFLAGS) -o $@ $^
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+test: $(CIKTI)
+	./$(CIKTI) --self-test
+
+kur: $(CIKTI)
+	install -m 0755 $(CIKTI) $(PREFIX)/bin/
+
+temiz:
+	rm -rf build $(NESNE)

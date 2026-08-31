@@ -1,0 +1,48 @@
+package com.ornek.depo;
+
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * Kullanicilari saklayan basit depo.
+ */
+@Repository
+public class KullaniciDeposu implements Depo<Kullanici, Long> {
+
+    private final EntityManager em;
+
+    public KullaniciDeposu(EntityManager em) {
+        this.em = em;
+    }
+
+    @Override
+    public Optional<Kullanici> bul(Long kimlik) {
+        return Optional.ofNullable(em.find(Kullanici.class, kimlik));
+    }
+
+    @Override
+    public List<Kullanici> hepsi() {
+        return em.createQuery("select k from Kullanici k", Kullanici.class)
+                 .getResultList();
+    }
+
+    @Transactional
+    public Kullanici kaydet(Kullanici kullanici) {
+        em.persist(kullanici);
+        return kullanici;
+    }
+
+    public static final class Sayfa {
+        private final int numara;
+        private final int boyut;
+
+        public Sayfa(int numara, int boyut) {
+            this.numara = numara;
+            this.boyut = boyut;
+        }
+
+        public int atlanacak() {
+            return numara * boyut;
+        }
+    }
+}

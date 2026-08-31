@@ -1,0 +1,50 @@
+package kuyruk
+
+import (
+	"errors"
+	"sync"
+)
+
+var ErrBos = errors.New("kuyruk bos")
+
+type Is struct {
+	Kimlik string
+	Oncelik int
+}
+
+type Alici interface {
+	Al() (Is, error)
+	Say() int
+}
+
+type Kuyruk struct {
+	mu    sync.Mutex
+	isler []Is
+}
+
+func Yeni(kapasite int) *Kuyruk {
+	return &Kuyruk{isler: make([]Is, 0, kapasite)}
+}
+
+func (k *Kuyruk) Koy(is Is) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	k.isler = append(k.isler, is)
+}
+
+func (k *Kuyruk) Al() (Is, error) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	if len(k.isler) == 0 {
+		return Is{}, ErrBos
+	}
+	is := k.isler[0]
+	k.isler = k.isler[1:]
+	return is, nil
+}
+
+func (k *Kuyruk) Say() int {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	return len(k.isler)
+}

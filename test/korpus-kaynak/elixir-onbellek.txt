@@ -1,0 +1,40 @@
+defmodule Uygulama.Onbellek do
+  @moduledoc """
+  Suresi dolan anahtarlari kendi temizleyen kucuk bir onbellek.
+  """
+
+  use GenServer
+
+  @varsayilan_sure :timer.minutes(5)
+
+  def start_link(secenekler \\ []) do
+    GenServer.start_link(__MODULE__, secenekler, name: __MODULE__)
+  end
+
+  def koy(anahtar, deger, sure \\ @varsayilan_sure) do
+    GenServer.cast(__MODULE__, {:koy, anahtar, deger, sure})
+  end
+
+  def al(anahtar) do
+    GenServer.call(__MODULE__, {:al, anahtar})
+  end
+
+  @impl true
+  def init(_secenekler) do
+    {:ok, %{}}
+  end
+
+  @impl true
+  def handle_call({:al, anahtar}, _kimden, durum) do
+    {:reply, Map.fetch(durum, anahtar), durum}
+  end
+
+  @impl true
+  def handle_cast({:koy, anahtar, deger, sure}, durum) do
+    Process.send_after(self(), {:sil, anahtar}, sure)
+    {:noreply, Map.put(durum, anahtar, deger)}
+  end
+
+  defp gecerli?(nil), do: false
+  defp gecerli?(_deger), do: true
+end

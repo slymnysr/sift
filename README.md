@@ -19,6 +19,17 @@ FAILED test/test_auth.py::test_expired_token - assert 401 == 200
 === 1 failed, 212 passed in 18.4s ===
 ```
 
+The same question, asked about a file instead of about a command, is a table of
+contents:
+
+```
+$ sift outline src/parser.rs
+pub struct Parser {
+pub fn parse(input: &str) -> Result<Ast, Error> {
+─ 34 lines not shown · sift peek src/parser.rs for any of them ─
+impl Iterator for Tokens {
+```
+
 ## What decides
 
 A free model does. `sift` sends it the numbered lines and asks one question:

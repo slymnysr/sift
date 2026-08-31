@@ -1,0 +1,35 @@
+#pragma once
+
+#include <memory>
+#include <string>
+#include <vector>
+
+namespace olcum {
+
+constexpr double kVarsayilanEsik = 0.75;
+
+template <typename T>
+class Pencere {
+ public:
+  explicit Pencere(std::size_t kapasite);
+
+  void ekle(const T& deger);
+  [[nodiscard]] double ortalama() const;
+  [[nodiscard]] std::size_t boyut() const noexcept { return icerik_.size(); }
+
+ private:
+  std::size_t kapasite_;
+  std::vector<T> icerik_;
+};
+
+class Olcer {
+ public:
+  virtual ~Olcer() = default;
+  virtual double olc(const std::string& ad) const = 0;
+};
+
+std::unique_ptr<Olcer> varsayilanOlcer();
+
+bool operator==(const Pencere<double>& sol, const Pencere<double>& sag);
+
+}  // namespace olcum

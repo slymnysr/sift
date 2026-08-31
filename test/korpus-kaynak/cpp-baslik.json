@@ -1,0 +1,25 @@
+{
+  "tool": "cpp",
+  "language": "cpp",
+  "script": "latin",
+  "failed": false,
+  "kind": "source",
+  "family": "braces",
+  "lines": 35,
+  "must_show": [
+    7,
+    9,
+    12,
+    14,
+    16,
+    17,
+    18,
+    25,
+    27,
+    28,
+    31,
+    33
+  ],
+  "noise": [],
+  "note": "C++ baslik: namespace, sablon sinif, sanal metotlar, operator asiri yukleme."
+}

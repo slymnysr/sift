@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SURUM="${SURUM:-$(git describe --tags --always)}"
+HEDEF="${HEDEF:-/srv/uygulama}"
+KALAN_SURUM=5
+
+temizle() {
+  rm -rf "${GECICI:-}"
+}
+trap temizle EXIT
+
+gunlukle() {
+  printf '%s  %s\n' "$(date -Is)" "$*" >&2
+}
+
+paketle() {
+  GECICI="$(mktemp -d)"
+  tar -czf "$GECICI/uygulama-$SURUM.tgz" --exclude=.git .
+  printf '%s\n' "$GECICI/uygulama-$SURUM.tgz"
+}
+
+yayinla() {
+  local paket="$1"
+  gunlukle "yayinlaniyor: $paket"
+  scp "$paket" "$HEDEF/surumler/"
+  ssh "$HEDEF" "ln -sfn surumler/$(basename "$paket") güncel"
+}
+
+eskileri_sil() {
+  ssh "$HEDEF" "ls -1t surumler | tail -n +$((KALAN_SURUM + 1)) | xargs -r rm --"
+}
+
+ana() {
+  gunlukle "surum $SURUM"
+  yayinla "$(paketle)"
+  eskileri_sil
+}
+
+ana "$@"

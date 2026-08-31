@@ -1,0 +1,42 @@
+{
+  "tool": "rust",
+  "language": "rust",
+  "script": "latin",
+  "failed": false,
+  "kind": "source",
+  "family": "braces",
+  "lines": 42,
+  "must_show": [
+    5,
+    11,
+    12,
+    20,
+    28,
+    32,
+    38,
+    39
+  ],
+  "noise": [
+    [
+      13,
+      17
+    ],
+    [
+      21,
+      25
+    ],
+    [
+      29,
+      29
+    ],
+    [
+      33,
+      34
+    ],
+    [
+      40,
+      40
+    ]
+  ],
+  "note": "Rust: pub/impl/fn ve trait uygulamasi; jenerik imza iki satira tasiyor."
+}

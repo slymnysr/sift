@@ -1,0 +1,46 @@
+from __future__ import annotations
+
+import asyncio
+from dataclasses import dataclass, field
+
+VARSAYILAN_ZAMAN_ASIMI = 30.0
+
+
+@dataclass(frozen=True)
+class Adim:
+    ad: str
+    komut: list[str]
+    bagimliliklar: tuple[str, ...] = ()
+
+
+class Akis:
+    """Adimlari bagimlilik sirasina gore yuruten kucuk bir planlayici."""
+
+    def __init__(self, adimlar: list[Adim]) -> None:
+        self._adimlar = {adim.ad: adim for adim in adimlar}
+        self._bitti: set[str] = set()
+
+    def sira(self) -> list[Adim]:
+        gorulen: set[str] = set()
+        sirali: list[Adim] = []
+
+        def gez(ad: str) -> None:
+            if ad in gorulen:
+                return
+            gorulen.add(ad)
+            for onceki in self._adimlar[ad].bagimliliklar:
+                gez(onceki)
+            sirali.append(self._adimlar[ad])
+
+        for ad in self._adimlar:
+            gez(ad)
+        return sirali
+
+    async def calistir(self, zaman_asimi: float = VARSAYILAN_ZAMAN_ASIMI) -> int:
+        for adim in self.sira():
+            surec = await asyncio.create_subprocess_exec(*adim.komut)
+            kod = await asyncio.wait_for(surec.wait(), zaman_asimi)
+            if kod != 0:
+                return kod
+            self._bitti.add(adim.ad)
+        return 0
