@@ -179,6 +179,67 @@ MUTATIONS = [
         '                    "stream": False,\n',
         '                    "stream": False,\n                    "user": os.getcwd(),\n',
     ),
+    # -- Faz 3: distillation -------------------------------------------------
+    Mutation(
+        "distill.py",
+        "a number past the end of the capture is dropped, not merely unprintable",
+        "        end = min(end, total)",
+        "        end = end",
+    ),
+    Mutation(
+        "distill.py",
+        "there is no line before the first one",
+        "        start = max(start, 1)",
+        "        start = start",
+    ),
+    Mutation(
+        "distill.py",
+        "a later piece is numbered as part of the whole capture",
+        "            windows.append((start + 1, lines[start:index]))",
+        "            windows.append((1, lines[start:index]))",
+    ),
+    Mutation(
+        "distill.py",
+        "the last piece is numbered as part of the whole capture too",
+        "    windows.append((start + 1, lines[start:]))",
+        "    windows.append((1, lines[start:]))",
+    ),
+    Mutation(
+        "distill.py",
+        "a capture too long for one ask is split",
+        "        if size and size + cost > CHARS_PER_ASK:",
+        "        if False:",
+    ),
+    Mutation(
+        "distill.py",
+        "an answer with no numbers in it is no answer",
+        "    if not chosen:\n        return None\n",
+        "    if False:\n        return None\n",
+    ),
+    Mutation(
+        "distill.py",
+        "lines folded away before a shown one are marked",
+        "        if start > previous_end + 1:",
+        "        if False:",
+    ),
+    Mutation(
+        "distill.py",
+        "lines folded away after the last shown one are marked",
+        "    if previous_end < len(lines):",
+        "    if False:",
+    ),
+    Mutation(
+        "distill.py",
+        "a line too wide to judge is shortened before it is asked about",
+        "PROMPT_LINE_CAP = 400",
+        "PROMPT_LINE_CAP = 100_000",
+    ),
+    Mutation(
+        "distill.py",
+        "the view is built from the capture and from nothing else",
+        "        text=render(lines, chosen, capture.handle),",
+        "        text=render(lines, chosen, capture.handle) + answer.text,",
+    ),
 ]
 
 
@@ -203,7 +264,21 @@ def _run_suite() -> tuple[int, str]:
     return finished.returncode, tail
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    """Every mutation, or only the ones whose rule contains the given words.
+
+        python test/mutations.py                 # all of them
+        python test/mutations.py numbering       # while fixing one escape
+
+    The filter is for the minutes between finding an escape and fixing it. A
+    filtered run is not a passing battery, and it says so at the end.
+    """
+    words = " ".join(argv if argv is not None else sys.argv[1:]).strip().lower()
+    chosen = [m for m in MUTATIONS if words in m.rule.lower()]
+    if not chosen:
+        print(f"No mutation mentions {words!r}.")
+        return 2
+
     code, tail = _run_suite()
     if code != 0:
         print(f"Baseline is not green ({tail}). Fix that first -- until then every")
@@ -212,7 +287,7 @@ def main() -> int:
     print(f"baseline  {tail}\n")
 
     escaped: list[Mutation] = []
-    for mutation in MUTATIONS:
+    for mutation in chosen:
         original = mutation.path.read_text(encoding="utf-8")
         found = original.count(mutation.before)
         if found != 1:
@@ -232,7 +307,9 @@ def main() -> int:
         else:
             print(f"caught     {mutation.rule}")
 
-    print(f"\n{len(MUTATIONS) - len(escaped)}/{len(MUTATIONS)} caught")
+    print(f"\n{len(chosen) - len(escaped)}/{len(chosen)} caught")
+    if words:
+        print(f"(only the {len(chosen)} mutations mentioning {words!r} were run)")
     if escaped:
         print("An escaped mutation means that rule is unguarded, not that it is unimportant.")
     return 1 if escaped else 0

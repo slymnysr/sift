@@ -44,7 +44,7 @@ sonraki faza geçilmez.
 | 0 | İskelet | paket, `notlar/`+`test/`, pyproject, CI, ilk yeşil test | bitti |
 | 1 | Yakalama | komutu kendi çalıştır, ham baytları sakla, byte-exact `peek` | bitti — [01-YAKALAMA.md](01-YAKALAMA.md) |
 | 2 | Model köprüsü | NVIDIA NIM istemcisi, **basamaklı** model (ultra→super→lightning), zaman aşımı, yeniden deneme | bitti — [02-MODEL-KOPRUSU.md](02-MODEL-KOPRUSU.md) |
-| 3 | Damıtma çekirdeği | numaralanmış satır → model → **yalnız numara** → yerel metin |
+| 3 | Damıtma çekirdeği | numaralanmış satır → model → **yalnız numara** → yerel metin | bitti — [03-DAMITMA.md](03-DAMITMA.md) |
 | 4 | Güvenlik ağı | model yokken determinist yedek; fail-open her yolda kanıtlanır |
 | 5 | Dil bağımsızlığı | dünya dilleri + yazılım dilleri korpusu, ölçüm |
 | 6 | Dosya taslağı | herhangi dilde bildirim çıkarımı (regex ailesi YOK) |
