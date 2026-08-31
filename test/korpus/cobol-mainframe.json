@@ -1,0 +1,36 @@
+{
+  "tool": "cobol/jcl",
+  "language": "en",
+  "script": "latin",
+  "failed": true,
+  "lines": 32,
+  "must_show": [
+    13,
+    19,
+    20,
+    21,
+    22,
+    23,
+    31,
+    32
+  ],
+  "noise": [
+    [
+      1,
+      7
+    ],
+    [
+      9,
+      12
+    ],
+    [
+      14,
+      18
+    ],
+    [
+      24,
+      30
+    ]
+  ],
+  "note": "Ana bilgisayar is gunlugu: sayfa beslemesi (U+000C) ve NEL (U+0085) icerir. Ikisi de Python'un satir sandigi ama terminalin saymadigi karakterler."
+}

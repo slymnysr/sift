@@ -1,0 +1,24 @@
+{
+  "tool": "cmake",
+  "language": "vi",
+  "script": "latin",
+  "failed": false,
+  "lines": 25,
+  "must_show": [
+    16,
+    17,
+    18,
+    25
+  ],
+  "noise": [
+    [
+      1,
+      15
+    ],
+    [
+      19,
+      24
+    ]
+  ],
+  "note": "BASARILI kosu, ama tek bir uyari onemli. Basarili bir kosuda gorulmesi gereken sey vardir ve bu, hata aramanin ise yaramadigi durumdur."
+}

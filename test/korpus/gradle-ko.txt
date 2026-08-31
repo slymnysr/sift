@@ -1,0 +1,33 @@
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugResources
+> Task :app:processDebugManifest
+> Task :app:javaPreCompileDebug
+> Task :app:mergeDebugShaders UP-TO-DATE
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets
+> Task :app:compressDebugAssets
+> Task :app:processDebugJavaRes NO-SOURCE
+> Task :app:checkDebugDuplicateClasses
+> Task :app:desugarDebugFileDependencies
+> Task :app:mergeExtDexDebug
+> Task :app:compileDebugKotlin FAILED
+e: file:///home/dev/jangbagoni/app/src/main/java/kr/ornek/장바구니/결제화면.kt:78:33 Type mismatch: inferred type is String? but String was expected
+e: file:///home/dev/jangbagoni/app/src/main/java/kr/ornek/장바구니/결제화면.kt:92:9 Unresolved reference: 할인율계산
+w: file:///home/dev/jangbagoni/app/src/main/java/kr/ornek/장바구니/상품목록.kt:14:5 Parameter '보기' is never used
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileDebugKotlin'.
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 41s
+28 actionable tasks: 12 executed, 16 up-to-date

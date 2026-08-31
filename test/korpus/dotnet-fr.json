@@ -1,0 +1,29 @@
+{
+  "tool": "dotnet",
+  "language": "fr",
+  "script": "latin",
+  "failed": true,
+  "lines": 15,
+  "must_show": [
+    6,
+    7,
+    10,
+    11,
+    15
+  ],
+  "noise": [
+    [
+      1,
+      5
+    ],
+    [
+      8,
+      9
+    ],
+    [
+      12,
+      14
+    ]
+  ],
+  "note": "MSBuild gercekten Fransizca konusur. Proje adlari da Fransizca."
+}

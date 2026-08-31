@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from sift import lines as text_lines
 from sift import store
 
 
@@ -40,7 +41,7 @@ def peek(handle: str, start: int | None = None, end: int | None = None) -> Peek:
     """
     raw = store.read_raw(handle)
     text = raw.decode("utf-8", errors="replace")
-    lines = text.splitlines()
+    lines = text_lines.of(text)
     total = len(lines)
 
     if total == 0:

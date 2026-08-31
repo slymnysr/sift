@@ -1,0 +1,23 @@
+{
+  "tool": "npm/webpack",
+  "language": "en",
+  "script": "latin",
+  "failed": false,
+  "lines": 17,
+  "must_show": [
+    14,
+    15,
+    17
+  ],
+  "noise": [
+    [
+      1,
+      13
+    ],
+    [
+      16,
+      16
+    ]
+  ],
+  "note": "BASARILI kosu; ANSI renk kodlari ve satir basi ile yeniden cizilen ilerleme cubugu icerir. Renk kodlari secimi bozmamali."
+}

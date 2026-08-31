@@ -1,0 +1,31 @@
+{
+  "tool": "mix test",
+  "language": "he",
+  "script": "hebrew",
+  "failed": true,
+  "lines": 19,
+  "must_show": [
+    8,
+    9,
+    10,
+    11,
+    12,
+    14,
+    17
+  ],
+  "noise": [
+    [
+      1,
+      7
+    ],
+    [
+      15,
+      16
+    ],
+    [
+      18,
+      19
+    ]
+  ],
+  "note": "Elixir; test adlari ve mesajlar Ibranice (sagdan sola)."
+}

@@ -1,0 +1,41 @@
+Waiting for deployment "भुगतान-सेवा" rollout to finish: 0 of 3 updated replicas are available...
+Waiting for deployment "भुगतान-सेवा" rollout to finish: 0 of 3 updated replicas are available...
+Waiting for deployment "भुगतान-सेवा" rollout to finish: 0 of 3 updated replicas are available...
+Waiting for deployment "भुगतान-सेवा" rollout to finish: 0 of 3 updated replicas are available...
+Waiting for deployment "भुगतान-सेवा" rollout to finish: 0 of 3 updated replicas are available...
+error: deployment "भुगतान-सेवा" exceeded its progress deadline
+
+Name:             भुगतान-सेवा-7c9f4b8d6-x2ml9
+Namespace:        उत्पादन
+Priority:         0
+Node:             worker-03/10.42.1.14
+Start Time:       Mon, 11 May 2026 09:14:22 +0300
+Labels:           app=भुगतान-सेवा
+                  pod-template-hash=7c9f4b8d6
+Status:           Running
+IP:               10.244.2.87
+Containers:
+  सेवा:
+    Image:          registry.local/bhugtan:2.7.1
+    Port:           8080/TCP
+    State:          Waiting
+      Reason:       CrashLoopBackOff
+    Last State:     Terminated
+      Reason:       Error
+      Exit Code:    1
+    Ready:          False
+    Restart Count:  7
+Events:
+  Type     Reason     Age                 From     Message
+  ----     ------     ----                ----     -------
+  Normal   Pulled     4m12s               kubelet  Container image already present on machine
+  Normal   Created    4m12s               kubelet  Created container सेवा
+  Normal   Started    4m11s               kubelet  Started container सेवा
+  Warning  BackOff    26s (x18 over 4m)   kubelet  Back-off restarting failed container
+
+==> कंटेनर लॉग <==
+[09:14:23] सेवा शुरू हो रही है, संस्करण 2.7.1
+[09:14:23] कॉन्फ़िगरेशन पढ़ा गया: /etc/bhugtan/config.yaml
+[09:14:24] त्रुटि: डेटाबेस से कनेक्ट नहीं हो सका (postgres://db.उत्पादन:5432)
+[09:14:24] कारण: संबंध अस्वीकृत — क्या सेवा चालू है?
+[09:14:24] सेवा बंद हो रही है, निकास कोड 1

@@ -1,0 +1,33 @@
+{
+  "tool": "docker",
+  "language": "ar",
+  "script": "arabic",
+  "failed": true,
+  "lines": 43,
+  "must_show": [
+    27,
+    28,
+    29,
+    30,
+    31,
+    34,
+    36,
+    40,
+    43
+  ],
+  "noise": [
+    [
+      1,
+      26
+    ],
+    [
+      32,
+      33
+    ],
+    [
+      35,
+      35
+    ]
+  ],
+  "note": "Docker build; sagdan sola yazi (Arapca) hem log satirlarinda hem hata metninde."
+}

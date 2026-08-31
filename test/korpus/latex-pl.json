@@ -1,0 +1,24 @@
+{
+  "tool": "pdflatex",
+  "language": "pl",
+  "script": "latin",
+  "failed": true,
+  "lines": 38,
+  "must_show": [
+    26,
+    32,
+    35,
+    37
+  ],
+  "noise": [
+    [
+      1,
+      25
+    ],
+    [
+      38,
+      38
+    ]
+  ],
+  "note": "LaTeX; belge Lehce, hata paket yuklemede. Cok uzun gurultulu paket listesi."
+}

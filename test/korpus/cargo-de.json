@@ -1,0 +1,29 @@
+{
+  "tool": "cargo",
+  "language": "de",
+  "script": "latin",
+  "failed": true,
+  "lines": 43,
+  "must_show": [
+    20,
+    21,
+    23,
+    24,
+    33,
+    34,
+    39,
+    40,
+    43
+  ],
+  "noise": [
+    [
+      1,
+      19
+    ],
+    [
+      42,
+      42
+    ]
+  ],
+  "note": "Rust derleyicisi Ingilizce konusur; Almanca olan projenin kendisi: tanimlayicilar, yorumlar, panik metni. Yaygin durum."
+}

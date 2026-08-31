@@ -1,0 +1,26 @@
+psql (16.3 (Debian 16.3-1.pgdg120+1))
+Type "help" for help.
+
+tienda=# \i migraciones/007_pedidos.sql
+BEGIN
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 42
+INSERT 0 118
+psql:migraciones/007_pedidos.sql:31: ERROR:  llave foránea viola la restricción «pedidos_cliente_id_fkey»
+DETALLE:  La llave (cliente_id)=(9041) no está presente en la tabla «clientes».
+CONTEXTO:  sentencia SQL: «INSERT INTO pedidos (cliente_id, total, creado_en) VALUES (9041, 1290, now())»
+psql:migraciones/007_pedidos.sql:31: LÍNEA 3:   VALUES (9041, 1290, now())
+                                                       ^
+psql:migraciones/007_pedidos.sql:32: ERROR:  la transacción actual fue abortada, las órdenes serán ignoradas hasta el fin de bloque de transacción
+psql:migraciones/007_pedidos.sql:33: ERROR:  la transacción actual fue abortada, las órdenes serán ignoradas hasta el fin de bloque de transacción
+psql:migraciones/007_pedidos.sql:34: ERROR:  la transacción actual fue abortada, las órdenes serán ignoradas hasta el fin de bloque de transacción
+psql:migraciones/007_pedidos.sql:35: ERROR:  la transacción actual fue abortada, las órdenes serán ignoradas hasta el fin de bloque de transacción
+psql:migraciones/007_pedidos.sql:36: ERROR:  la transacción actual fue abortada, las órdenes serán ignoradas hasta el fin de bloque de transacción
+ROLLBACK
+tienda=# \q

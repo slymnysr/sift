@@ -1,0 +1,26 @@
+{
+  "tool": "pytest",
+  "language": "en",
+  "script": "latin",
+  "failed": true,
+  "lines": 30,
+  "must_show": [
+    18,
+    23,
+    24,
+    25,
+    29,
+    30
+  ],
+  "noise": [
+    [
+      1,
+      16
+    ],
+    [
+      28,
+      28
+    ]
+  ],
+  "note": "Ingilizce pytest kosusu; 214 testten biri kaliyor. Referans ornek."
+}

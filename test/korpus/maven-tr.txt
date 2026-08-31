@@ -1,0 +1,36 @@
+[INFO] Scanning for projects...
+[INFO]
+[INFO] ------------------< com.ornek:fatura-servisi >-------------------
+[INFO] Building fatura-servisi 2.3.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] --- resources:3.3.1:resources (default-resources) @ fatura-servisi ---
+[INFO] Copying 4 resources from src/main/resources to target/classes
+[INFO] --- compiler:3.13.0:compile (default-compile) @ fatura-servisi ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] --- surefire:3.2.5:test (default-test) @ fatura-servisi ---
+[INFO] Running com.ornek.fatura.KdvHesabiTest
+[INFO] Tests run: 18, Failures: 0, Errors: 0, Skipped: 0 - in com.ornek.fatura.KdvHesabiTest
+[INFO] Running com.ornek.fatura.IskontoTest
+[ERROR] Tests run: 9, Failures: 1, Errors: 0, Skipped: 0 - in com.ornek.fatura.IskontoTest
+[ERROR] iskontoToplamiGecemez  Time elapsed: 0.031 s  <<< FAILURE!
+org.opentest4j.AssertionFailedError: iskonto tutari fatura toplamini gecemez ==> expected: <2400> but was: <2880>
+    at com.ornek.fatura.IskontoTest.iskontoToplamiGecemez(IskontoTest.java:64)
+[INFO] Running com.ornek.fatura.YuvarlamaTest
+[INFO] Tests run: 22, Failures: 0, Errors: 0, Skipped: 0 - in com.ornek.fatura.YuvarlamaTest
+[INFO]
+[INFO] Results:
+[INFO]
+[ERROR] Failures:
+[ERROR]   IskontoTest.iskontoToplamiGecemez:64 iskonto tutari fatura toplamini gecemez ==> expected: <2400> but was: <2880>
+[INFO] Tests run: 49, Failures: 1, Errors: 0, Skipped: 0
+[INFO]
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  12.784 s
+[INFO] Finished at: 2026-03-11T14:02:51+03:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.2.5:test (default-test) on project fatura-servisi: There are test failures.
+[ERROR] -> [Help 1]
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.

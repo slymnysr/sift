@@ -46,7 +46,7 @@ sonraki faza geçilmez.
 | 2 | Model köprüsü | NVIDIA NIM istemcisi, **basamaklı** model (ultra→super→lightning), zaman aşımı, yeniden deneme | bitti — [02-MODEL-KOPRUSU.md](02-MODEL-KOPRUSU.md) |
 | 3 | Damıtma çekirdeği | numaralanmış satır → model → **yalnız numara** → yerel metin | bitti — [03-DAMITMA.md](03-DAMITMA.md) |
 | 4 | Güvenlik ağı | model yokken determinist yedek; fail-open her yolda kanıtlanır | bitti — [04-GUVENLIK-AGI.md](04-GUVENLIK-AGI.md) |
-| 5 | Dil bağımsızlığı | dünya dilleri + yazılım dilleri korpusu, ölçüm |
+| 5 | Dil bağımsızlığı | dünya dilleri + yazılım dilleri korpusu, ölçüm | bitti — [05-DIL-BAGIMSIZLIGI.md](05-DIL-BAGIMSIZLIGI.md) |
 | 6 | Dosya taslağı | herhangi dilde bildirim çıkarımı (regex ailesi YOK) |
 | 7 | MCP sunucusu | araçlar, kayıt, istemciye bağlanma |
 | 8 | Bütçe ve ölçüm | kazanç raporu, korpus kıyası |

@@ -1,0 +1,36 @@
+ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers
+  built with gcc 13 (Ubuntu 13.2.0-23ubuntu4)
+  configuration: --prefix=/usr --extra-version=3ubuntu5 --toolchain=hardened
+  libavutil      58. 29.100 / 58. 29.100
+  libavcodec     60. 31.102 / 60. 31.102
+  libavformat    60. 16.100 / 60. 16.100
+  libavdevice    60.  3.100 / 60.  3.100
+  libavfilter     9. 12.100 /  9. 12.100
+  libswscale      7.  5.100 /  7.  5.100
+  libswresample   4. 12.100 /  4. 12.100
+  libpostproc    57.  3.100 / 57.  3.100
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'ویدیوها/مصاحبه-اول.mp4':
+  Metadata:
+    major_brand     : isom
+    minor_version   : 512
+    compatible_brands: isomiso2avc1mp41
+    encoder         : Lavf60.16.100
+  Duration: 00:42:18.53, start: 0.000000, bitrate: 2914 kb/s
+  Stream #0:0[0x1](und): Video: h264 (High), yuv420p, 1920x1080, 2780 kb/s, 25 fps
+  Stream #0:1[0x2](fas): Audio: aac (LC), 48000 Hz, stereo, fltp, 128 kb/s
+Stream mapping:
+  Stream #0:0 -> #0:0 (h264 (native) -> hevc (libx265))
+  Stream #0:1 -> #0:1 (aac (native) -> aac (native))
+frame=  250 fps=0.0 q=32.0 size=    1024KiB time=00:00:10.00 bitrate= 838.9kbits/s
+frame=  500 fps= 61 q=32.0 size=    2048KiB time=00:00:20.00 bitrate= 838.9kbits/s
+frame=  750 fps= 62 q=32.0 size=    3072KiB time=00:00:30.00 bitrate= 838.9kbits/s
+frame= 1000 fps= 62 q=32.0 size=    4096KiB time=00:00:40.00 bitrate= 838.9kbits/s
+frame= 1250 fps= 62 q=32.0 size=    5120KiB time=00:00:50.00 bitrate= 838.9kbits/s
+frame= 1500 fps= 62 q=32.0 size=    6144KiB time=00:01:00.00 bitrate= 838.9kbits/s
+frame= 1750 fps= 62 q=32.0 size=    7168KiB time=00:01:10.00 bitrate= 838.9kbits/s
+frame= 2000 fps= 62 q=32.0 size=    8192KiB time=00:01:20.00 bitrate= 838.9kbits/s
+[aac @ 0x5622f1a3c400] خطا: کانال صوتی پشتیبانی نمی‌شود
+Error while filtering: Invalid argument
+[out#0/mp4 @ 0x5622f1a2b800] Nothing was written into output file, because at least one of its streams received no packets.
+frame= 2013 fps= 62 q=32.0 Lsize=       0KiB time=00:01:20.52 bitrate=   0.0kbits/s speed=2.48x
+Conversion failed!

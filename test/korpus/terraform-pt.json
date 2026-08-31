@@ -1,0 +1,20 @@
+{
+  "tool": "terraform",
+  "language": "pt",
+  "script": "latin",
+  "failed": true,
+  "lines": 40,
+  "must_show": [
+    33,
+    35,
+    36,
+    39
+  ],
+  "noise": [
+    [
+      1,
+      32
+    ]
+  ],
+  "note": "Terraform; kaynak adlari ve aciklamalar Portekizce, arac Ingilizce."
+}

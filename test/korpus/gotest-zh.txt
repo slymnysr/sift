@@ -1,0 +1,23 @@
+=== RUN   Test下单
+--- PASS: Test下单 (0.00s)
+=== RUN   Test取消订单
+--- PASS: Test取消订单 (0.00s)
+=== RUN   Test库存扣减
+--- PASS: Test库存扣减 (0.01s)
+=== RUN   Test优惠券
+=== RUN   Test优惠券/折扣不得超过总价
+    订单_test.go:114: 折扣金额超过订单总价
+        期望: 折扣 <= 2400
+        实际: 折扣 = 2880
+--- FAIL: Test优惠券 (0.00s)
+    --- FAIL: Test优惠券/折扣不得超过总价 (0.00s)
+    --- PASS: Test优惠券/过期优惠券被拒绝 (0.00s)
+=== RUN   Test运费
+--- PASS: Test运费 (0.00s)
+=== RUN   Test发票编号
+--- PASS: Test发票编号 (0.00s)
+FAIL
+exit status 1
+FAIL    example.com/商城/订单    0.213s
+ok      example.com/商城/仓储    0.104s
+ok      example.com/商城/支付    0.087s

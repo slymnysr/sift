@@ -1,0 +1,40 @@
+data.aws_ami.base: Reading...
+data.aws_availability_zones.disponiveis: Reading...
+data.aws_availability_zones.disponiveis: Read complete after 0s
+data.aws_ami.base: Read complete after 1s [id=ami-0c2b8ca1dad447f8a]
+aws_vpc.rede_principal: Refreshing state... [id=vpc-04f2a9c1]
+aws_subnet.publica[0]: Refreshing state... [id=subnet-0a1b2c3d]
+aws_subnet.publica[1]: Refreshing state... [id=subnet-0e4f5a6b]
+aws_security_group.banco_dados: Refreshing state... [id=sg-07c8d9e0]
+aws_db_subnet_group.principal: Refreshing state... [id=grupo-principal]
+
+Terraform used the selected providers to generate the following execution plan.
+Resource actions are indicated with the following symbols:
+  + create
+  ~ update in-place
+
+Terraform will perform the following actions:
+
+  # aws_db_instance.banco_pedidos will be created
+  + resource "aws_db_instance" "banco_pedidos" {
+      + allocated_storage = 20
+      + engine            = "postgres"
+      + engine_version    = "16.3"
+      + instance_class    = "db.t4g.micro"
+      + identifier        = "banco-pedidos-producao"
+    }
+
+Plan: 1 to add, 0 to change, 0 to destroy.
+aws_db_instance.banco_pedidos: Creating...
+aws_db_instance.banco_pedidos: Still creating... [10s elapsed]
+aws_db_instance.banco_pedidos: Still creating... [20s elapsed]
+aws_db_instance.banco_pedidos: Still creating... [30s elapsed]
+aws_db_instance.banco_pedidos: Still creating... [40s elapsed]
+Erro: criação da instância de banco de dados falhou
+
+  with aws_db_instance.banco_pedidos,
+  on banco.tf line 12, in resource "aws_db_instance" "banco_pedidos":
+  12: resource "aws_db_instance" "banco_pedidos" {
+
+InvalidParameterValue: A senha mestre deve conter pelo menos 8 caracteres.
+    status code: 400, request id: 3f9a1c2e-77b1-4d0e-9a11-6c8e2f0b1d43

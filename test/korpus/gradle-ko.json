@@ -1,0 +1,34 @@
+{
+  "tool": "gradle",
+  "language": "ko",
+  "script": "cjk",
+  "failed": true,
+  "lines": 33,
+  "must_show": [
+    16,
+    17,
+    23,
+    24,
+    25,
+    32
+  ],
+  "noise": [
+    [
+      1,
+      15
+    ],
+    [
+      18,
+      22
+    ],
+    [
+      26,
+      31
+    ],
+    [
+      33,
+      33
+    ]
+  ],
+  "note": "Android/Gradle; kaynak dizeleri ve Kotlin tanimlayicilari Korece."
+}

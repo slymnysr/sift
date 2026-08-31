@@ -1,0 +1,27 @@
+{
+  "tool": "make/gcc",
+  "language": "ru",
+  "script": "cyrillic",
+  "failed": true,
+  "lines": 21,
+  "must_show": [
+    11,
+    12,
+    13,
+    16,
+    17,
+    19,
+    20
+  ],
+  "noise": [
+    [
+      1,
+      10
+    ],
+    [
+      21,
+      21
+    ]
+  ],
+  "note": "GCC gercekten Rusca konusur (gettext). Hem arac hem proje Rusca."
+}

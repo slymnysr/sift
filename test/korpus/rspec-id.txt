@@ -1,0 +1,21 @@
+Randomized with seed 24917
+........................................
+........................................
+..........F.............................
+......................
+
+Failures:
+
+  1) Keranjang menghitung diskon tidak melebihi total belanja
+     Failure/Error: expect(keranjang.total).to be >= 0
+
+       expected: >= 0
+            got:    -480
+     # ./spec/keranjang_spec.rb:88:in `block (2 levels) in <top (required)>'
+
+Finished in 2.31 seconds (files took 0.94 seconds to load)
+142 examples, 1 failure
+
+Failed examples:
+
+rspec ./spec/keranjang_spec.rb:85 # Keranjang menghitung diskon tidak melebihi total belanja

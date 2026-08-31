@@ -1,0 +1,23 @@
+mag 11 09:12:01 srv-01 systemd[1]: Avvio di Servizio Fatture...
+mag 11 09:12:01 srv-01 fatture[2841]: caricamento configurazione da /etc/fatture.toml
+mag 11 09:12:01 srv-01 fatture[2841]: connessione al database riuscita
+mag 11 09:12:01 srv-01 systemd[1]: Avviato Servizio Fatture.
+mag 11 09:12:31 srv-01 fatture[2841]: elaborate 42 fatture in 30s
+mag 11 09:13:01 srv-01 fatture[2841]: elaborate 39 fatture in 30s
+mag 11 09:13:31 srv-01 fatture[2841]: elaborate 44 fatture in 30s
+mag 11 09:14:01 srv-01 fatture[2841]: elaborate 41 fatture in 30s
+mag 11 09:14:31 srv-01 fatture[2841]: elaborate 38 fatture in 30s
+mag 11 09:15:01 srv-01 fatture[2841]: elaborate 43 fatture in 30s
+mag 11 09:15:31 srv-01 fatture[2841]: elaborate 40 fatture in 30s
+mag 11 09:16:01 srv-01 fatture[2841]: elaborate 45 fatture in 30s
+mag 11 09:16:14 srv-01 fatture[2841]: ATTENZIONE: spazio su disco quasi esaurito (94%)
+mag 11 09:16:31 srv-01 fatture[2841]: elaborate 37 fatture in 30s
+mag 11 09:17:01 srv-01 fatture[2841]: elaborate 42 fatture in 30s
+mag 11 09:17:22 srv-01 fatture[2841]: ERRORE: impossibile scrivere il file PDF: spazio esaurito sul dispositivo
+mag 11 09:17:22 srv-01 fatture[2841]: traceback: scrivi_pdf (pdf.py:88) -> genera (fattura.py:210)
+mag 11 09:17:22 srv-01 systemd[1]: fatture.service: Processo principale terminato, codice=exited, stato=1/FAILURE
+mag 11 09:17:22 srv-01 systemd[1]: fatture.service: Unità entrata in stato fallito.
+mag 11 09:17:22 srv-01 systemd[1]: fatture.service: Fallito con il risultato 'exit-code'.
+mag 11 09:17:27 srv-01 systemd[1]: fatture.service: Programmato riavvio, contatore riavvii 1.
+mag 11 09:17:27 srv-01 systemd[1]: Arrestato Servizio Fatture.
+mag 11 09:17:27 srv-01 systemd[1]: Avvio di Servizio Fatture...

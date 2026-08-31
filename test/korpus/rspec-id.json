@@ -1,0 +1,31 @@
+{
+  "tool": "rspec",
+  "language": "id",
+  "script": "latin",
+  "failed": true,
+  "lines": 21,
+  "must_show": [
+    9,
+    10,
+    12,
+    13,
+    14,
+    17,
+    21
+  ],
+  "noise": [
+    [
+      1,
+      8
+    ],
+    [
+      15,
+      16
+    ],
+    [
+      18,
+      18
+    ]
+  ],
+  "note": "Ruby/RSpec; ornek adlari Endonezyaca."
+}

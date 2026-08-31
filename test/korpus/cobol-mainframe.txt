@@ -1,0 +1,32 @@
+J E S 2  J O B  L O G  --  S Y S T E M  S Y S 1  --  N O D E  N 1
+
+14.02.11 JOB09412 ---- MONDAY,    11 MAY 2026 ----
+14.02.11 JOB09412  IRR010I  USERID BATCH01  IS ASSIGNED TO THIS JOB.
+14.02.12 JOB09412  ICH70001I BATCH01  LAST ACCESS AT 13.58.02 ON MONDAY
+14.02.12 JOB09412  $HASP373 FATURA   STARTED - INIT 3 - CLASS A - SYS SYS1
+14.02.12 JOB09412  IEF403I FATURA - STARTED - TIME=14.02.12
+
+14.02.13 JOB09412  -                                         --TIMINGS (MINS.)--
+14.02.13 JOB09412  -STEPNAME PROCSTEP    RC   EXCP    CPU    SRB  CLOCK   SERV
+14.02.13 JOB09412  -COMPILE  COB2         0    421   0.00   0.00    0.1   1892
+14.02.14 JOB09412  -LINKEDT  LKED         0    118   0.00   0.00    0.0    612
+14.02.19 JOB09412  -RUNSTEP  GO          12   9048   0.04   0.00    0.1  41207
+
+IGYCB0000I  IBM Enterprise COBOL for z/OS  6.4.0  P260315
+IGYSC0000I  Compilation of program INVOICE started.0 warnings, 0 errors.
+IGYSC1000I  End of compilation 1, program INVOICE, no statements flagged.
+
+IGZ0035S  There was an unsuccessful OPEN or CLOSE of file INVMAST in program
+          INVOICE at relative location X'0F2A'.  Neither FILE STATUS nor an
+          ERROR declarative were specified.  The status code was 35.
+CEE3204S  The system detected a protection exception (System Completion Code=0C4).
+          From entry point INVOICE at statement 418 at compile unit offset +0000023A.
+CEE3DMP V2 R4.0: Condition processing resulted in the unhandled condition.
+Information for enclave INVOICE
+  Information for thread 8000000000000000
+    Traceback:
+      DSA   Entry        E Offset  Statement   Load Mod
+      1     INVOICE      +0000023A       418   INVOICE
+      2     CEEHDSP      +00001A2C         0   CEEPLPKA
+14.02.19 JOB09412  IEF472I FATURA RUNSTEP - COMPLETION CODE - SYSTEM=0C4 USER=0000
+14.02.19 JOB09412  $HASP395 FATURA   ENDED - RC=0012

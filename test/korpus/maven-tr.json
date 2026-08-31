@@ -1,0 +1,40 @@
+{
+  "tool": "maven",
+  "language": "tr",
+  "script": "latin",
+  "failed": true,
+  "lines": 36,
+  "must_show": [
+    16,
+    17,
+    18,
+    19,
+    26,
+    27,
+    29,
+    34
+  ],
+  "noise": [
+    [
+      1,
+      15
+    ],
+    [
+      20,
+      24
+    ],
+    [
+      28,
+      28
+    ],
+    [
+      30,
+      33
+    ],
+    [
+      35,
+      36
+    ]
+  ],
+  "note": "Java/Maven; test adlari ve iddia mesajlari Turkce, noktali i ve g breve dahil."
+}

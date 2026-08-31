@@ -1,0 +1,39 @@
+{
+  "tool": "npm/vite",
+  "language": "ja",
+  "script": "cjk",
+  "failed": true,
+  "lines": 28,
+  "must_show": [
+    10,
+    11,
+    13,
+    16,
+    18,
+    21,
+    23
+  ],
+  "noise": [
+    [
+      1,
+      9
+    ],
+    [
+      15,
+      15
+    ],
+    [
+      20,
+      20
+    ],
+    [
+      22,
+      22
+    ],
+    [
+      24,
+      28
+    ]
+  ],
+  "note": "TypeScript/Vite derlemesi; dosya adlari ve mesajlar Japonca, genislik 2 karakterler."
+}

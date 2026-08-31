@@ -1,0 +1,43 @@
+    Updating crates.io index
+ Downloaded thiserror v1.0.63
+ Downloaded serde_json v1.0.128
+ Downloaded 2 crates (312.4 KB) in 0.71s
+   Compiling proc-macro2 v1.0.86
+   Compiling unicode-ident v1.0.12
+   Compiling quote v1.0.37
+   Compiling syn v2.0.77
+   Compiling serde v1.0.210
+   Compiling serde_json v1.0.128
+   Compiling lagerverwaltung v0.4.1 (/home/dev/lagerverwaltung)
+warning: unused import: `std::fmt::Write`
+ --> src/bericht.rs:3:5
+  |
+3 | use std::fmt::Write;
+  |     ^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+error[E0308]: mismatched types
+  --> src/bestand.rs:47:23
+   |
+47 |     let uebrig: u32 = menge - entnommen;
+   |                 ---   ^^^^^^^^^^^^^^^^^ expected `u32`, found `i64`
+    |                 |
+    |                 expected due to this
+    |
+help: you can convert an `i64` to a `u32` and panic if the converted value doesn't fit
+    |
+ 47 |     let uebrig: u32 = (menge - entnommen).try_into().unwrap();
+    |                       +                  ++++++++++++++++++++
+
+error[E0499]: cannot borrow `regal` as mutable more than once at a time
+  --> src/bestand.rs:88:24
+   |
+ 86 |     let erster = regal.entnehmen(1);
+    |                  ----- first mutable borrow occurs here
+ 87 |     // Zweite Entnahme aus demselben Regal, bevor die erste ausgewertet wurde
+88 |     let zweiter = regal.entnehmen(1);
+   |                        ^^^^^ second mutable borrow occurs here
+
+warning: `lagerverwaltung` (bin "lagerverwaltung") generated 1 warning
+error: could not compile `lagerverwaltung` (bin "lagerverwaltung") due to 2 previous errors

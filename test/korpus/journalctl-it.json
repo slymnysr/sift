@@ -1,0 +1,30 @@
+{
+  "tool": "journalctl",
+  "language": "it",
+  "script": "latin",
+  "failed": true,
+  "lines": 23,
+  "must_show": [
+    13,
+    16,
+    17,
+    18,
+    19,
+    20
+  ],
+  "noise": [
+    [
+      1,
+      12
+    ],
+    [
+      14,
+      15
+    ],
+    [
+      21,
+      23
+    ]
+  ],
+  "note": "systemd gunlugu; hem systemd hem servis Italyanca. Tekrar eden gurultu bol."
+}

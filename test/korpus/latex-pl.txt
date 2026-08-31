@@ -1,0 +1,38 @@
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023)
+restricted \write18 enabled.
+entering extended mode
+(./praca-dyplomowa.tex
+LaTeX2e <2023-11-01> patch level 1
+L3 programming layer <2024-01-22>
+(/usr/share/texlive/texmf-dist/tex/latex/base/book.cls
+Document Class: book 2023/05/17 v1.4n Standard LaTeX document class
+(/usr/share/texlive/texmf-dist/tex/latex/base/bk11.clo))
+(/usr/share/texlive/texmf-dist/tex/latex/polski/polski.sty
+(/usr/share/texlive/texmf-dist/tex/latex/base/inputenc.sty))
+(/usr/share/texlive/texmf-dist/tex/latex/babel/babel.sty
+(/usr/share/texlive/texmf-dist/tex/generic/babel/babel.def))
+(/usr/share/texlive/texmf-dist/tex/latex/geometry/geometry.sty
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/keyval.sty))
+(/usr/share/texlive/texmf-dist/tex/latex/hyperref/hyperref.sty
+(/usr/share/texlive/texmf-dist/tex/latex/kvsetkeys/kvsetkeys.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/kvdefinekeys/kvdefinekeys.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/pdfescape/pdfescape.sty))
+(./rozdzialy/wstep.tex) (./rozdzialy/metoda.tex)
+(./rozdzialy/wyniki.tex
+Overfull \hbox (12.4pt too wide) in paragraph at lines 88--91
+Overfull \hbox (3.1pt too wide) in paragraph at lines 104--106
+Underfull \vbox (badness 10000) has occurred while \output is active
+(./rozdzialy/wnioski.tex)
+! LaTeX Error: File `pgfplots.sty' not found.
+
+Type X to quit or <RETURN> to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name:
+! Emergency stop.
+<read *>
+
+l.24 \usepackage{pgfplots}
+                         ^
+No pages of output.
+Transcript written on praca-dyplomowa.log.

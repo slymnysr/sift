@@ -1,0 +1,15 @@
+MSBuild version 17.11.4+37eb419ad pour .NET
+  Détermination des projets à restaurer...
+  Tous les projets sont à jour pour la restauration.
+  Bibliotheque.Domaine -> /home/dev/facturation/Bibliotheque.Domaine/bin/Debug/net8.0/Bibliotheque.Domaine.dll
+  Bibliotheque.Donnees -> /home/dev/facturation/Bibliotheque.Donnees/bin/Debug/net8.0/Bibliotheque.Donnees.dll
+/home/dev/facturation/Api/Controleurs/FacturesControleur.cs(63,21): error CS1503: Argument 1 : impossible de convertir de 'string' en 'System.Guid' [/home/dev/facturation/Api/Api.csproj]
+/home/dev/facturation/Api/Services/CalculTva.cs(28,16): error CS0029: Impossible de convertir implicitement le type 'decimal' en 'int' [/home/dev/facturation/Api/Api.csproj]
+/home/dev/facturation/Api/Services/CalculTva.cs(41,13): warning CS0219: La variable 'ancienTaux' est assignée, mais sa valeur n'est jamais utilisée [/home/dev/facturation/Api/Api.csproj]
+
+    2 Avertissement(s)
+    2 Erreur(s)
+
+Temps écoulé 00:00:07.94
+
+La build a échoué.

@@ -24,6 +24,7 @@ a rule that makes no claim cannot make a false one.
 
 from __future__ import annotations
 
+from sift import lines as text_lines
 from sift.capture import Capture
 from sift.distill import View, render
 
@@ -53,7 +54,7 @@ def fallback(capture: Capture) -> View:
     view a model chose. A reader who is told which lines were picked, and by
     what, can decide whether to go and read the rest.
     """
-    lines = capture.text().splitlines()
+    lines = text_lines.of(capture.text())
     total = len(lines)
     if not total:
         return View(capture.handle, "", 0, 0, None, 0)

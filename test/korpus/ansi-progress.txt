@@ -1,0 +1,17 @@
+[36m>[0m dashboard@2.1.0 build
+[36m>[0m webpack --mode production
+
+[90m[  0%][0m compiling[90m[ 12%][0m building modules[90m[ 34%][0m building modules[90m[ 58%][0m building modules[90m[ 71%][0m sealing[90m[ 92%][0m emitting[90m[100%][0m done
+asset [1mmain.4f2a1c.js[0m 284 KiB [emitted] [minimized] (name: main)
+asset [1mvendor.9b3e07.js[0m 912 KiB [emitted] [minimized] (name: vendor)
+asset [1mstyles.1d8f42.css[0m  48 KiB [emitted] (name: styles)
+asset index.html 1.2 KiB [emitted]
+orphan modules 214 KiB [orphan] 118 modules
+runtime modules 3.1 KiB 8 modules
+cacheable modules 1.84 MiB
+  modules by path ./src/*.js 412 KiB 62 modules
+  modules by path ./node_modules/ 1.44 MiB 284 modules
+[33mWARNING[0m in asset size limit: The following asset exceeds the recommended size limit (244 KiB).
+  vendor.9b3e07.js (912 KiB)
+
+webpack [1m5.94.0[0m compiled with [33m1 warning[0m in 18431 ms

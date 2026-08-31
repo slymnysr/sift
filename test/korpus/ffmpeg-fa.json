@@ -1,0 +1,21 @@
+{
+  "tool": "ffmpeg",
+  "language": "fa",
+  "script": "arabic",
+  "failed": true,
+  "lines": 36,
+  "must_show": [
+    32,
+    33,
+    34,
+    35,
+    36
+  ],
+  "noise": [
+    [
+      1,
+      31
+    ]
+  ],
+  "note": "ffmpeg; dosya adlari Farsca (sagdan sola), arac Ingilizce, cok gurultulu bir baslik."
+}

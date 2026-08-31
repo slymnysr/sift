@@ -329,6 +329,31 @@ MUTATIONS = [
         '        if args[0] == "--timeout" and len(args) > 1:',
         '        if "--timeout" in args and len(args) > 1:',
     ),
+    # -- Faz 5: one definition of a line, for every language ------------------
+    Mutation(
+        "lines.py",
+        "a line ends at a newline and at nothing else",
+        "    found = text.split(\"\\n\")",
+        "    found = text.splitlines()",
+    ),
+    Mutation(
+        "lines.py",
+        "a trailing newline ends the last line rather than starting another",
+        "    if found[-1] == \"\":\n",
+        "    if False:\n",
+    ),
+    Mutation(
+        "lines.py",
+        "a carriage return before a newline belongs to the ending",
+        '    return [line[:-1] if line.endswith("\\r") else line for line in found]',
+        "    return found",
+    ),
+    Mutation(
+        "store.py",
+        "a capture is read as bytes, so nothing rewrites its line endings",
+        "    return p.read_bytes()",
+        '    return p.read_text(encoding="utf-8", errors="replace").encode("utf-8")',
+    ),
 ]
 
 

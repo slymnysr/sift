@@ -1,0 +1,25 @@
+{
+  "tool": "psql",
+  "language": "es",
+  "script": "latin",
+  "failed": true,
+  "lines": 26,
+  "must_show": [
+    15,
+    16,
+    17,
+    18,
+    25
+  ],
+  "noise": [
+    [
+      1,
+      14
+    ],
+    [
+      20,
+      24
+    ]
+  ],
+  "note": "PostgreSQL gercekten Ispanyolca konusur (LC_MESSAGES). Hem arac hem sema Ispanyolca."
+}

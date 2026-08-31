@@ -1,0 +1,13 @@
+{
+  "tool": "git",
+  "language": "en",
+  "script": "latin",
+  "failed": false,
+  "lines": 9,
+  "must_show": [
+    8,
+    9
+  ],
+  "noise": [],
+  "note": "BASARILI ve kisa: soylenecek sey son satirdadir. Kisa bir yakalamada kisaltmanin kazanci yoktur; onemli olan hicbir seyin kaybolmamasidir."
+}

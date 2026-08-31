@@ -1,0 +1,43 @@
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 842B done
+#1 DONE 0.0s
+#2 [internal] load metadata for docker.io/library/node:20-alpine
+#2 DONE 1.2s
+#3 [internal] load .dockerignore
+#3 transferring context: 96B done
+#3 DONE 0.0s
+#4 [1/6] FROM docker.io/library/node:20-alpine@sha256:2d07db07a2df
+#4 resolve docker.io/library/node:20-alpine@sha256:2d07db07a2df done
+#4 sha256:2d07db07a2df 1.43kB / 1.43kB done
+#4 sha256:9f4c1e6a3b02 3.99MB / 3.99MB 0.4s done
+#4 sha256:6b1a1c2e8f77 42.13MB / 42.13MB 2.1s done
+#4 DONE 2.6s
+#5 [2/6] WORKDIR /التطبيق
+#5 DONE 0.1s
+#6 [3/6] COPY package*.json ./
+#6 DONE 0.0s
+#7 [4/6] RUN npm ci --omit=dev
+#7 4.220 added 214 packages, and audited 215 packages in 4s
+#7 4.221
+#7 4.221 32 packages are looking for funding
+#7 DONE 4.6s
+#8 [5/6] COPY . .
+#8 DONE 0.2s
+#9 [6/6] RUN node تحقق.js
+#9 0.412 خطأ: ملف الإعدادات غير موجود: /التطبيق/إعدادات/الإنتاج.json
+#9 0.413     at قراءة_الإعدادات (/التطبيق/تحقق.js:18:11)
+#9 0.413     at Object.<anonymous> (/التطبيق/تحقق.js:44:1)
+#9 0.414 تعذّر بدء تشغيل الخدمة. توقّف البناء.
+#9 ERROR: process "/bin/sh -c node تحقق.js" did not complete successfully: exit code: 1
+------
+ > [6/6] RUN node تحقق.js:
+0.412 خطأ: ملف الإعدادات غير موجود: /التطبيق/إعدادات/الإنتاج.json
+------
+Dockerfile:14
+--------------------
+  12 |     COPY . .
+  13 |
+  14 | >>> RUN node تحقق.js
+  15 |     CMD ["node", "الخادم.js"]
+--------------------
+ERROR: failed to solve: process "/bin/sh -c node تحقق.js" did not complete successfully: exit code: 1

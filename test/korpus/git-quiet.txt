@@ -1,0 +1,9 @@
+Enumerating objects: 27, done.
+Counting objects: 100% (27/27), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (14/14), done.
+Writing objects: 100% (15/15), 2.14 KiB | 2.14 MiB/s, done.
+Total 15 (delta 11), reused 0 (delta 0), pack-reused 0
+remote: Resolving deltas: 100% (11/11), completed with 11 local objects.
+To github.com:ornek/depo.git
+   7c8f377..9f2c41a  main -> main

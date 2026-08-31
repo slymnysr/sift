@@ -1,0 +1,19 @@
+Compiling 24 files (.ex)
+Generated חנות app
+..................................................
+..................................................
+..............................
+
+  1) test חישוב הנחה לא עולה על הסכום (חנות.הזמנותTest)
+     test/הזמנות_test.exs:64
+     Assertion with <= failed
+     code:  assert הנחה <= סכום
+     left:  2880
+     right: 2400
+     stacktrace:
+       test/הזמנות_test.exs:67: (test)
+
+Finished in 1.4 seconds (0.9s async, 0.5s sync)
+131 tests, 1 failure
+
+Randomized with seed 741203

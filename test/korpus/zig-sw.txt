@@ -1,0 +1,22 @@
+install
+└─ install seva
+   └─ zig build-exe seva Debug native
+Semantic Analysis [412] hesabu.zig
+Semantic Analysis [598] orodha.zig
+Semantic Analysis [740] hifadhi.zig
+src/hesabu.zig:31:22: error: expected type 'u32', found 'i64'
+    const salio: u32 = jumla - kilichotolewa;
+                       ~~~~~~^~~~~~~~~~~~~~~
+src/hesabu.zig:31:22: note: unsigned 32-bit int cannot represent all possible i64 values
+src/orodha.zig:88:9: error: use of undeclared identifier 'ongezaBidhaa'
+    ongezaBidhaa(orodha, bidhaa);
+    ^~~~~~~~~~~~
+referenced by:
+    kuu: src/main.zig:14:9
+    callMain: /usr/lib/zig/std/start.zig:524:32
+error: the following command failed with 2 compilation errors:
+/usr/bin/zig build-exe -ODebug -Mroot=src/main.zig --cache-dir .zig-cache
+Build Summary: 1/5 steps succeeded; 1 failed
+install transitive failure
+└─ install seva transitive failure
+   └─ zig build-exe seva Debug native 2 errors

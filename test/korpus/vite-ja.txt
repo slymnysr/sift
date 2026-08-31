@@ -1,0 +1,28 @@
+> 在庫管理@1.4.0 build
+> vite build
+
+vite v5.4.2 building for production...
+transforming...
+✓ 12 modules transformed.
+✓ 148 modules transformed.
+✓ 431 modules transformed.
+✓ 892 modules transformed.
+src/画面/注文一覧.tsx:42:18 - error TS2345: 型 'string | undefined' の引数を型 'string' のパラメーターに割り当てることはできません。
+  型 'undefined' を型 'string' に割り当てることはできません。
+
+42   const 表示名 = 顧客名を整える(注文.顧客?.名前)
+                                   ~~~~~~~~~~~~~~~
+
+src/機能/在庫.ts:117:7 - error TS2532: オブジェクトは 'undefined' である可能性があります。
+
+117   if (棚.数量 < 最小在庫) 補充を依頼する(棚)
+          ~~~~~~~
+
+2 個のエラーが見つかりました。
+error during build:
+Error: Build failed with 2 errors
+    at failureErrorWithLog (/home/dev/zaiko/node_modules/esbuild/lib/main.js:1476:15)
+    at /home/dev/zaiko/node_modules/esbuild/lib/main.js:945:25
+npm ERR! Lifecycle script `build` failed with error:
+npm ERR! Error: command failed
+npm ERR!   in workspace: 在庫管理@1.4.0

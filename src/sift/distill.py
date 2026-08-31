@@ -23,6 +23,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from sift import lines as text_lines
 from sift.capture import Capture
 from sift.model import Bridge
 
@@ -144,7 +145,7 @@ def distill(capture: Capture, bridge: Bridge | None = None) -> View | None:
     do with that; falling back is not this function's business, and pretending to
     have judged would be worse than admitting it did not.
     """
-    lines = capture.text().splitlines()
+    lines = text_lines.of(capture.text())
     if not lines:
         return View(capture.handle, "", 0, 0, None, 0)
 
