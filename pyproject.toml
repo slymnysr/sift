@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sift-mcp"
+version = "0.1.0"
+description = "Runs your command, then gives the model only the lines that matter."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{ name = "slmnys" }]
+keywords = ["mcp", "llm", "context", "distillation", "cli"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Build Tools",
+]
+dependencies = []
+
+[project.optional-dependencies]
+mcp = ["mcp>=1.2"]
+
+[project.scripts]
+sift = "sift.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/slymnysr/sift"
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sift"]
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 96
+src = ["src", "test"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
