@@ -48,10 +48,11 @@ sonraki faza geçilmez.
 | 4 | Güvenlik ağı | model yokken determinist yedek; fail-open her yolda kanıtlanır | bitti — [04-GUVENLIK-AGI.md](04-GUVENLIK-AGI.md) |
 | 5 | Dil bağımsızlığı | dünya dilleri + yazılım dilleri korpusu, ölçüm | bitti — [05-DIL-BAGIMSIZLIGI.md](05-DIL-BAGIMSIZLIGI.md) |
 | 6 | Dosya taslağı | herhangi dilde bildirim çıkarımı (regex ailesi YOK) | bitti — [06-DOSYA-TASLAGI.md](06-DOSYA-TASLAGI.md) |
-| 7 | MCP sunucusu | araçlar, kayıt, istemciye bağlanma |
-| 8 | Bütçe ve ölçüm | kazanç raporu, korpus kıyası |
-| 9 | Gizlilik | sır maskeleme, opt-out, ham veri yerelde |
-| 10 | Yayın | README, lisans, CI, PyPI |
+| 7 | MCP sunucusu | araçlar, kayıt, istemciye bağlanma | bitti — [07-MCP-SUNUCUSU.md](07-MCP-SUNUCUSU.md) |
+| 8 | Bütçe ve ölçüm | pencereler arası bütçe, kazanç raporu, korpus kıyası |
+| 9 | Arka plan komutları | bitmeyen komutlar: başlat, yalnız yeniyi oku, durdur |
+| 10 | Gizlilik | sır maskeleme, opt-out, ham veri yerelde |
+| 11 | Yayın | README, lisans, CI, PyPI |
 
 ## Kapsam kararları
 

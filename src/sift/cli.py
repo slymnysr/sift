@@ -31,11 +31,8 @@ import sys
 
 from sift import store
 from sift.capture import Capture, run
-from sift.distill import View, distill
-from sift.fallback import fallback
-from sift.model import Bridge
-from sift.outline import ends_of, outline
 from sift.peek import peek
+from sift.view import best_outline, best_view, footer, outline_footer, peek_footer
 
 USAGE = """sift -- run a command, keep every byte, show the lines that matter
 
@@ -123,10 +120,10 @@ def _run(args: list[str]) -> int:
 
 
 def _show(capture: Capture) -> None:
-    view, who = _view(capture)
+    view, who = best_view(capture)
     if view.text:
         print(view.text)
-    print(_footer(capture, view, who), file=sys.stderr)
+    print(footer(capture, view, who), file=sys.stderr)
 
 
 def _last_resort(capture: Capture) -> None:
@@ -142,35 +139,6 @@ def _last_resort(capture: Capture) -> None:
     except OSError as exc:
         print(f"sift: the capture is at {store.raw_path(capture.handle)} ({exc})",
               file=sys.stderr)
-
-
-def _view(capture: Capture) -> tuple[View, str]:
-    """The best view available, and a word about where it came from.
-
-    Every failure below lands in the same place: the ends of the capture, shown
-    without a model. That is the whole safety net -- there is no path out of
-    this function that does not return something to read.
-    """
-    bridge = Bridge()
-    reason = "no model"
-    try:
-        chosen = distill(capture, bridge)
-        if chosen is not None:
-            return chosen, chosen.model or "model"
-        reason = bridge.last_error or "no lines chosen"
-    except Exception as exc:  # a bug here must not cost the user their output
-        reason = f"{type(exc).__name__}: {exc}"
-    return fallback(capture), f"no model ({reason})"
-
-
-def _footer(capture: Capture, view: View, who: str) -> str:
-    """One line telling the reader what they are looking at, and what they are not."""
-    meta = capture.meta
-    ending = "timed out" if meta.timed_out else f"exit {meta.exit_code}"
-    return (
-        f"sift {capture.handle} · {ending} · {view.kept:,}/{view.total:,} lines"
-        f" · {who} · {meta.duration_s:.1f}s"
-    )
 
 
 def _exit_code(capture: Capture) -> int:
@@ -192,40 +160,15 @@ def _outline(args: list[str]) -> int:
 
     path = args[0]
     try:
-        view, who = _outline_view(path)
+        view, who = best_outline(path)
     except OSError as exc:  # the file itself cannot be read; there is no view
         print(f"sift: {exc}", file=sys.stderr)
         return 1
 
     if view.text:
         print(view.text)
-    print(
-        f"sift {path} · {view.kept:,}/{view.total:,} lines · {who}",
-        file=sys.stderr,
-    )
+    print(outline_footer(path, view, who), file=sys.stderr)
     return 0
-
-
-def _outline_view(path: str) -> tuple[View, str]:
-    """The best outline available, and a word about where it came from.
-
-    Shaped like `_view` and for the same reason: every way of failing to ask a
-    model ends at the ends of the file rather than at an error. The one failure
-    that is allowed through is the file being unreadable, because then there is
-    nothing to show and saying so is the only honest answer.
-    """
-    bridge = Bridge()
-    reason = "no model"
-    try:
-        chosen = outline(path, bridge)
-        if chosen is not None:
-            return chosen, chosen.model or "model"
-        reason = bridge.last_error or "no lines chosen"
-    except OSError:
-        raise
-    except Exception as exc:  # a bug here must not cost the user their outline
-        reason = f"{type(exc).__name__}: {exc}"
-    return ends_of(path), f"no model ({reason})"
 
 
 def _peek(args: list[str]) -> int:
@@ -241,11 +184,7 @@ def _peek(args: list[str]) -> int:
         return 1
     if found.text:
         print(found.text)
-    print(
-        f"sift {found.handle} · lines {found.first_line:,}-{found.last_line:,}"
-        f" of {found.total_lines:,}",
-        file=sys.stderr,
-    )
+    print(peek_footer(found), file=sys.stderr)
     return 0
 
 

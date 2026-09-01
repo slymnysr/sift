@@ -56,6 +56,22 @@ unchanged. Every gap in a view says how many lines it covers.
 endpoint, a nonsense reply — every one of these falls back to rules that need
 none of them. The command still runs; you still get its output.
 
+## In an agent
+
+The same three answers are available over MCP, and that is where they pay most:
+a tool result is re-sent on every turn that follows it, so a build log kept out
+of a transcript goes on staying out of it.
+
+```bash
+pip install -e ".[mcp]"        # from a clone; PyPI once the last phase lands
+claude mcp add sift -- sift-mcp
+```
+
+Any client that speaks stdio will do -- the command is `sift-mcp`. It offers
+`run`, `outline` and `peek`, and because a client never sees stderr, the last
+line of every result says what you are looking at: which handle, how the command
+ended, and whether a model chose the lines or none could be reached.
+
 ## Status
 
 Early. Being built in phases; see `notlar/00-PLAN.md` for the arc and

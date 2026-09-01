@@ -22,16 +22,25 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
-mcp = ["mcp>=1.2"]
+# Only the server needs this; `sift` at a terminal has no dependencies at all.
+# Pinned at 2 because that is where `mcp.server.mcpserver` lives -- on 1.x the
+# same class was `mcp.server.fastmcp`, and importing the server would fail.
+mcp = ["mcp>=2"]
 
 [project.scripts]
 sift = "sift.cli:main"
+sift-mcp = "sift.server:main"
 
 [project.urls]
 Homepage = "https://github.com/slymnysr/sift"
 
 [dependency-groups]
-dev = ["pytest>=8", "ruff>=0.6"]
+dev = [
+    "mcp>=2",
+    "pytest>=8",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.6",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/sift"]
@@ -39,6 +48,9 @@ packages = ["src/sift"]
 [tool.pytest.ini_options]
 testpaths = ["test"]
 addopts = "-q"
+# The stdio tests talk to a real server over a real pipe, which is async all
+# the way down. Without this every one of them would be collected and skipped.
+asyncio_mode = "auto"
 
 [tool.ruff]
 line-length = 96

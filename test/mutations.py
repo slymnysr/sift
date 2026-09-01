@@ -290,10 +290,10 @@ MUTATIONS = [
         "    if False:\n        return TIMED_OUT\n",
     ),
     Mutation(
-        "cli.py",
+        "view.py",
         "a bug in the distiller costs the view and nothing else",
-        "    except Exception as exc:  # a bug here must not cost the user their output",
-        "    except ValueError as exc:  # a bug here must not cost the user their output",
+        "    except Exception as exc:  # a bug here must not cost the caller their output",
+        "    except ValueError as exc:  # a bug here must not cost the caller their output",
     ),
     Mutation(
         "cli.py",
@@ -308,8 +308,8 @@ MUTATIONS = [
     Mutation(
         "cli.py",
         "the view goes to stdout and the note about it goes to stderr",
-        "    print(_footer(capture, view, who), file=sys.stderr)",
-        "    print(_footer(capture, view, who))",
+        "    print(footer(capture, view, who), file=sys.stderr)",
+        "    print(footer(capture, view, who))",
     ),
     Mutation(
         "cli.py",
@@ -387,10 +387,53 @@ MUTATIONS = [
         "    except ValueError as exc:  # the file itself cannot be read; there is no view",
     ),
     Mutation(
-        "cli.py",
+        "view.py",
         "an outline nobody chose falls to the ends of the file, not to an error",
         '    return ends_of(path), f"no model ({reason})"',
         "    raise RuntimeError(reason)",
+    ),
+    # -- Faz 7: the server, and everything stderr used to carry --------------
+    Mutation(
+        "server.py",
+        "the note about a view travels inside the result, because there is no stderr",
+        '    return f"{text}\\n\\n{note}" if text else note',
+        "    return text if text else note",
+    ),
+    Mutation(
+        "view.py",
+        "one note serves both front ends, so neither can drift from the other",
+        '        f" · {who} · {meta.duration_s:.1f}s"',
+        '        f" · {meta.duration_s:.1f}s"',
+    ),
+    Mutation(
+        "server.py",
+        "a command line written by a client is a command line, pipes and all",
+        "        capture = run_command([command], shell=True, timeout=timeout)",
+        "        capture = run_command([command], shell=False, timeout=timeout)",
+    ),
+    Mutation(
+        "server.py",
+        "a file that cannot be read comes back as a sentence, not as a stack",
+        "    except OSError as exc:  # the file cannot be read; there is no view to give\n"
+        '        return f"sift: {exc}"\n',
+        "    except OSError:  # the file cannot be read; there is no view to give\n"
+        "        raise\n",
+    ),
+    Mutation(
+        "server.py",
+        "a command that cannot even be started comes back as a sentence too",
+        "    except OSError as exc:\n"
+        '        return f"sift: {exc}"\n'
+        "    view, who = best_view(capture)\n",
+        "    except OSError:\n"
+        "        raise\n"
+        "    view, who = best_view(capture)\n",
+    ),
+    Mutation(
+        "server.py",
+        "every tool on offer is named in the instructions the calling model reads",
+        '    name="peek",',
+        '    name="slice",',
     ),
 ]
 

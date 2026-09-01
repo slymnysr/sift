@@ -11,7 +11,7 @@ import sys
 
 import pytest
 
-from sift import cli
+from sift import cli, view
 from sift.distill import View
 
 FAILING = "import sys; print('bir'); sys.exit(3)"
@@ -91,7 +91,7 @@ def test_a_broken_distiller_costs_the_view_and_nothing_else(capsys, monkeypatch)
     def explode(capture, bridge=None):
         raise RuntimeError("kirildi")
 
-    monkeypatch.setattr(cli, "distill", explode)
+    monkeypatch.setattr(view, "distill", explode)
 
     assert cli.main(_run(FAILING)) == 3
     said = capsys.readouterr()
@@ -130,8 +130,8 @@ def test_even_a_broken_fallback_costs_only_the_shortening(capsys, monkeypatch):
     def also_explode(capture):
         raise RuntimeError("yedek de kirildi")
 
-    monkeypatch.setattr(cli, "distill", explode)
-    monkeypatch.setattr(cli, "fallback", also_explode)
+    monkeypatch.setattr(view, "distill", explode)
+    monkeypatch.setattr(view, "fallback", also_explode)
 
     assert cli.main(_run("import sys; print('bir'); print('iki'); sys.exit(3)")) == 3
     said = capsys.readouterr()
@@ -154,7 +154,7 @@ def test_the_view_goes_to_stdout_and_the_note_about_it_goes_to_stderr(capsys):
 
 def test_the_footer_names_the_model_when_there_was_one(capsys, monkeypatch):
     monkeypatch.setattr(
-        cli,
+        view,
         "distill",
         lambda capture, bridge=None: View(capture.handle, "iki", 1, 9, "a-model", 1),
     )
