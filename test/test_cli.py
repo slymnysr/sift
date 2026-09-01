@@ -11,7 +11,7 @@ import sys
 
 import pytest
 
-from sift import cli, view
+from sift import capture, cli, store, view
 from sift.distill import View
 
 FAILING = "import sys; print('bir'); sys.exit(3)"
@@ -40,6 +40,7 @@ def test_no_arguments_explains_every_command(capsys):
     assert "sift outline" in said
     assert "sift peek" in said
     assert "sift list" in said
+    assert "sift stats" in said
 
 
 def test_an_unknown_command_is_an_error_and_says_so_on_stderr(capsys):
@@ -165,6 +166,50 @@ def test_the_footer_names_the_model_when_there_was_one(capsys, monkeypatch):
     assert "1/9 lines" in said.err
 
 
+def test_the_footer_says_when_part_of_the_capture_was_never_looked_at(
+    capsys, monkeypatch
+):
+    """Six answers missing out of seven is not the same as a short answer.
+
+    Both read as a small number of lines out of a large one, in the same words.
+    Without this the quieter of the two passes for the louder.
+    """
+    monkeypatch.setattr(
+        view,
+        "distill",
+        lambda capture, bridge=None: View(
+            capture.handle, "iki", 1, 9, "a-model", 7, unanswered=6
+        ),
+    )
+    cli.main(_run("print('bir')"))
+
+    assert "6 questions unanswered" in capsys.readouterr().err
+
+
+def test_a_footer_with_every_answer_in_says_nothing_about_silence(capsys):
+    cli.main(_run("print('bir')"))
+
+    assert "unanswered" not in capsys.readouterr().err
+
+
+def test_the_bill_records_the_questions_that_came_back_with_nothing(
+    capsys, monkeypatch
+):
+    monkeypatch.setattr(
+        view,
+        "distill",
+        lambda capture, bridge=None: View(
+            capture.handle, "iki", 1, 9, "a-model", 7, unanswered=6
+        ),
+    )
+    cli.main(_run("print('bir')"))
+    handle = capsys.readouterr().err.split()[1]
+
+    saving = store.load_saving(handle)
+    assert saving is not None
+    assert saving.unanswered == 6
+
+
 def test_the_footer_carries_the_handle_that_peek_needs(capsys):
     cli.main(_run("print('bir')"))
     handle = capsys.readouterr().err.split()[1]
@@ -209,3 +254,101 @@ def test_list_shows_what_was_run_and_how_it_ended(capsys):
 def test_list_of_an_empty_store_says_nothing_rather_than_failing(capsys):
     assert cli.main(["list"]) == 0
     assert capsys.readouterr().out == ""
+
+
+# -- Faz 8: what the shortening cost, and what it saved ---------------------
+
+
+def test_stats_of_an_empty_store_says_so_rather_than_failing(capsys):
+    assert cli.main(["stats"]) == 0
+    assert "nothing to add up" in capsys.readouterr().out
+
+
+def test_a_bill_that_cannot_be_written_costs_the_report_and_nothing_else(
+    monkeypatch, tmp_path
+):
+    """The one part of this tool that is allowed to fail without saying so.
+
+    A cache swept up between the run and the view is not a reason for the caller
+    to lose the view they asked for. Reproduced by pointing the bill at a
+    directory that is not there, which is what a sweep leaves behind.
+
+    Asked of `best_view` rather than of `cli.main`, on purpose. The command line
+    puts its own net under the whole view (`the view is optional; the output is
+    not`), and a rule tested through that net would pass whether store keeps its
+    promise or not. This is store's promise, so it is asked of store's caller.
+    """
+    monkeypatch.setattr(store, "view_path", lambda handle: tmp_path / "gone" / "view.json")
+    got = capture.run([sys.executable, "-c", "print('bir')"])
+
+    built, _who = view.best_view(got)
+
+    assert "bir" in built.text
+    assert store.savings() == [], "the row is what was lost, and only the row"
+
+
+def test_a_run_writes_down_what_its_view_cost(capsys):
+    assert cli.main(_run("for n in range(60): print(f'satir {n}')")) == 0
+    shown = capsys.readouterr().out
+
+    (meta, saving), = store.savings()
+    assert saving.handle == meta.handle
+    assert saving.total == 60
+    assert saving.raw_bytes == meta.byte_count
+    # The bill is for the view that was printed, not for one recomputed later.
+    assert saving.shown_bytes == len(shown.rstrip("\n").encode("utf-8"))
+    assert saving.shown_bytes < saving.raw_bytes
+
+
+def test_a_view_nobody_chose_is_billed_too(capsys):
+    """A report that counted only the good runs would flatter the tool.
+
+    Every test in this file runs with no key, so this view came from the ends of
+    the capture. It cost the caller whatever it cost them, and it is counted.
+    """
+    assert cli.main(_run("for n in range(60): print(n)")) == 0
+    capsys.readouterr()
+
+    (_, saving), = store.savings()
+    assert saving.model is None
+    assert saving.asks == 0
+    assert saving.shown_bytes > 0
+
+
+def test_a_capture_nobody_viewed_is_left_out_rather_than_counted_as_free():
+    """Counting it would credit the tool for output it never shortened."""
+    capture.run([sys.executable, "-c", "print('bir')"])
+
+    assert len(store.recent()) == 1
+    assert store.savings() == []
+
+
+def test_stats_adds_the_runs_up_and_says_where_the_rest_of_it_is(capsys):
+    assert cli.main(_run("for n in range(200): print(f'satir {n}')")) == 0
+    assert cli.main(_run("for n in range(300): print(f'baska {n}')")) == 0
+    capsys.readouterr()
+
+    assert cli.main(["stats"]) == 0
+    said = capsys.readouterr().out
+    assert "2 runs ·" in said
+    assert "on disk, not gone" in said
+
+    raw = sum(s.raw_bytes for _, s in store.savings())
+    shown = sum(s.shown_bytes for _, s in store.savings())
+    assert f"{raw:,} B captured" in said
+    assert f"{shown:,} B shown" in said
+
+
+def test_a_report_that_cannot_be_written_costs_nothing(capsys, tmp_path, monkeypatch):
+    """The bookkeeping is the only part of this tool nobody asked for.
+
+    A read-only cache or a directory swept up between the run and the view must
+    cost the report and stop there -- not the output, and not the exit code.
+    """
+    monkeypatch.setattr(
+        store, "view_path", lambda handle: tmp_path / "yok" / "olmayan" / "view.json"
+    )
+
+    assert cli.main(_run("print('bir')")) == 0
+    assert "bir" in capsys.readouterr().out
+    assert store.savings() == []

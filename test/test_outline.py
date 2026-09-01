@@ -120,16 +120,27 @@ def test_the_prompt_shows_the_model_the_file_and_nothing_else(tmp_path):
         f"{n}| {line}" for n, line in enumerate(body, 1)
     ]
     # The question asked is the one this module wrote, not the one `distill`
-    # asks about a command's output. Two questions, one machine underneath.
-    assert judge.seen[-1][0] == o.QUESTION
+    # asks about a command's output. Two questions, one machine underneath --
+    # which is why the prompt starts with it rather than being only it: the
+    # budget and the answer format are added by the machine, once, for both.
+    assert judge.seen[-1][0].startswith(o.QUESTION)
 
 
 def test_the_question_asks_for_numbers_in_the_one_shared_way(tmp_path):
-    """One parser reads every answer, so one sentence describes every answer."""
-    assert o.QUESTION.endswith(d.ANSWER_FORMAT)
-    assert d.QUESTION.endswith(d.ANSWER_FORMAT)
-    assert o.QUESTION.count("Answer with line numbers only") == 1
-    assert str(o.BUDGET) in o.QUESTION
+    """One parser reads every answer, so one sentence describes every answer.
+
+    A question no longer ends with the format, it is followed by it, which is
+    the same rule made impossible to break rather than remembered: a question
+    written next year cannot arrive carrying a second way to answer, because
+    there is no longer anywhere in a question to put one.
+    """
+    for question in (o.QUESTION, d.QUESTION):
+        asked = d.prompt(question, o.BUDGET, 1)
+        assert asked.startswith(question)
+        assert asked.endswith(d.ANSWER_FORMAT)
+        assert asked.count("Answer with line numbers only") == 1
+        assert "Answer with line numbers only" not in question
+        assert str(o.BUDGET) in asked
 
 
 # -- the file is read the way the rest of the tool reads bytes ---------------
@@ -152,16 +163,21 @@ def test_an_empty_file_has_an_empty_outline_and_nobody_is_asked(tmp_path):
 
 
 def test_an_over_long_answer_is_shown_whole_rather_than_quietly_trimmed(tmp_path):
-    """The budget is asked for, not enforced -- and a long outline says so.
+    """The budget is asked for and asked again, never cut -- and a long outline says so.
 
     Cutting the answer back would mean ranking declarations without reading the
-    language. `kept` out of `total` is the honest alternative: the reader can
-    see that the outline came back long.
+    language. Faz 8 added the other move: hand it back and ask which part of it
+    to keep. This judge refuses -- it answers with everything, twice -- and the
+    outline comes back at full length rather than shortened by arithmetic here.
+    `kept` out of `total` is the honest alternative: the reader can see that the
+    outline came back long.
     """
     count = o.BUDGET * 3
     body = "\n".join(f"def f{n}(): pass" for n in range(count)) + "\n"
-    view = o.outline(_write(tmp_path / "buyuk.py", body), _Judge(f"1-{count}"))
+    judge = _Judge(f"1-{count}")
+    view = o.outline(_write(tmp_path / "buyuk.py", body), judge)
     assert (view.kept, view.total) == (count, count)
+    assert view.asks == 2, "it was asked a second time before being believed"
 
 
 # -- the way back -----------------------------------------------------------

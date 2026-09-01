@@ -17,9 +17,10 @@ from __future__ import annotations
 
 import pytest
 
+import budget as b
 import korpus_reader as k
 from sift import lines as text_lines
-from sift.distill import distill, numbered
+from sift.distill import View, distill, numbered
 from sift.fallback import fallback
 from sift.model import Answer
 
@@ -183,3 +184,88 @@ def test_numbering_a_sample_never_moves_a_line():
     lines = text_lines.of(numbered(sample.body))
     assert len(lines) == sample.total
     assert lines[-1] == f"{sample.total}| {sample.line(sample.total)}"
+
+
+# -- Faz 8: what the measurement is allowed to blame the ceiling for ---------
+
+def test_a_sample_the_endpoint_never_answered_for_is_left_out_of_the_row():
+    """Its required lines were not lost to the ceiling. Nobody looked for them.
+
+    Counted into the row, an unanswered sample lowers the score of whichever
+    budget happened to be running when a free endpoint was busy -- which is how
+    the first pinned run reported the default budget as a bug.
+    """
+    sample = k.every()[0]
+    row = b.Row(b.BUDGET)
+
+    b._fold(row, sample, View(sample.name, "", 0, 0, "a-model", 3, unanswered=2))
+
+    assert row.counted == 0
+    assert row.required == 0, "an unanswered sample must not lower the score"
+    assert row.silent == [f"{sample.name}: 2/3 unanswered"]
+
+
+def test_a_sample_with_no_answer_at_all_is_left_out_the_same_way():
+    sample = k.every()[0]
+    row = b.Row(b.BUDGET)
+
+    b._fold(row, sample, None)
+
+    assert row.counted == 0
+    assert row.required == 0
+    assert row.silent == [f"{sample.name}: no answer at all"]
+
+
+def test_a_sample_that_was_answered_for_is_counted_and_scored():
+    sample = k.every()[0]
+    row = b.Row(b.BUDGET)
+    shown = "\n".join(sample.line(n) for n in sample.must_show)
+
+    b._fold(row, sample, View(sample.name, shown, len(sample.must_show), 99, "a-model", 1))
+
+    assert row.counted == 1
+    assert row.silent == []
+    assert row.found == row.required == len(sample.must_show)
+
+
+
+def _row(budget, missed):
+    return b.Row(budget, missed=list(missed))
+
+
+def test_a_line_lost_with_and_without_a_ceiling_is_not_charged_to_the_ceiling():
+    """The corpus loses some lines at every setting. That is the model, not the sum.
+
+    A report that charged them to the default budget would fail the build over a
+    judgement nobody changed, and the one number the build is watching would stop
+    meaning anything.
+    """
+    both = ["gradle-ko 32: BUILD FAILED"]
+    cost, anyway = b.verdict([_row(b.BUDGET, both), _row(None, both)])
+
+    assert cost == []
+    assert anyway == ["gradle-ko 32: BUILD FAILED"]
+
+
+def test_a_line_only_the_ceiling_loses_is_charged_to_the_ceiling():
+    cost, anyway = b.verdict(
+        [
+            _row(b.BUDGET, ["gotest-zh 8: === RUN"]),
+            _row(None, ["gradle-ko 32: BUILD FAILED"]),
+        ]
+    )
+
+    assert cost == ["gotest-zh 8: === RUN"]
+    assert anyway == []
+
+
+def test_with_nothing_to_compare_against_every_miss_is_the_ceilings():
+    """`budget.py 120` has no unbounded row, so nothing can be ruled out."""
+    cost, anyway = b.verdict([_row(b.BUDGET, ["gradle-ko 32: BUILD FAILED"])])
+
+    assert cost == ["gradle-ko 32: BUILD FAILED"]
+    assert anyway == []
+
+
+def test_a_run_without_the_default_budget_has_nothing_to_say_about_it():
+    assert b.verdict([_row(20, ["latex-pl 32: ! Emergency stop."])]) == ([], [])

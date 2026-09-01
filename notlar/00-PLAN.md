@@ -49,7 +49,7 @@ sonraki faza geçilmez.
 | 5 | Dil bağımsızlığı | dünya dilleri + yazılım dilleri korpusu, ölçüm | bitti — [05-DIL-BAGIMSIZLIGI.md](05-DIL-BAGIMSIZLIGI.md) |
 | 6 | Dosya taslağı | herhangi dilde bildirim çıkarımı (regex ailesi YOK) | bitti — [06-DOSYA-TASLAGI.md](06-DOSYA-TASLAGI.md) |
 | 7 | MCP sunucusu | araçlar, kayıt, istemciye bağlanma | bitti — [07-MCP-SUNUCUSU.md](07-MCP-SUNUCUSU.md) |
-| 8 | Bütçe ve ölçüm | pencereler arası bütçe, kazanç raporu, korpus kıyası |
+| 8 | Bütçe ve ölçüm | pencereler arası bütçe, kazanç raporu, korpus kıyası | bitti — [08-BUTCE-VE-OLCUM.md](08-BUTCE-VE-OLCUM.md) |
 | 9 | Arka plan komutları | bitmeyen komutlar: başlat, yalnız yeniyi oku, durdur |
 | 10 | Gizlilik | sır maskeleme, opt-out, ham veri yerelde |
 | 11 | Yayın | README, lisans, CI, PyPI |

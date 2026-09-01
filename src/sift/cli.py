@@ -1,12 +1,13 @@
 """The command line: run something, read what mattered, go and read the rest.
 
-Four commands and no more, because each one is a promise that has to keep
-working in every language and every shell:
+Four commands that do something, because each one is a promise that has to keep
+working in every language and every shell -- and one that reports on them:
 
     sift run -- pytest -q          run it, show the lines that mattered
     sift outline src/parser.rs     what a file declares, without its bodies
     sift peek a3f1 200 260         the capture itself, byte for byte
     sift list                      what has been run lately
+    sift stats                     what the shortening cost, and what it saved
 
 `outline` is the same machine asking a different question. Nothing in it knows
 one language from another, and there is no list of suffixes deciding what it
@@ -40,6 +41,7 @@ USAGE = """sift -- run a command, keep every byte, show the lines that matter
   sift outline PATH
   sift peek HANDLE|PATH [FIRST] [LAST]
   sift list [COUNT]
+  sift stats [COUNT]
 
 Everything after COMMAND is passed to it unchanged. Use -- when the command
 has flags that look like sift's own."""
@@ -67,6 +69,8 @@ def main(argv: list[str] | None = None) -> int:
         return _peek(rest)
     if word == "list":
         return _list(rest)
+    if word == "stats":
+        return _stats(rest)
     print(f"sift: no such command: {word}\n\n{USAGE}", file=sys.stderr)
     return 2
 
@@ -194,6 +198,42 @@ def _list(args: list[str]) -> int:
         ending = "timed out" if meta.timed_out else f"exit {meta.exit_code}"
         written = " ".join(meta.command)
         print(f"{meta.handle}  {ending:>9}  {meta.byte_count:>10,} B  {written}")
+    return 0
+
+
+def _stats(args: list[str]) -> int:
+    """What the shortening cost and what it saved, over the runs it was used on.
+
+    Per run and then in total, because the two say different things. One run is
+    a claim about one command; the total is the only number that answers the
+    question somebody installing this actually has, which is whether the tool is
+    worth the asks it spends.
+    """
+    limit = _line_number(args[0]) if args else None
+    found = store.savings(limit or 20)
+    if not found:
+        print("sift: no view has been built yet, so there is nothing to add up.")
+        return 0
+
+    print(
+        f"{'handle':8}  {'captured':>12}  {'shown':>10}  {'part':>6}"
+        f"  {'asks':>4}  command"
+    )
+    raw = shown = 0
+    for meta, saving in found:
+        raw += saving.raw_bytes
+        shown += saving.shown_bytes
+        print(
+            f"{saving.handle:8}  {saving.raw_bytes:>10,} B  {saving.shown_bytes:>8,} B"
+            f"  {saving.part:>5.1f}%  {saving.asks:>4}  {' '.join(meta.command)}"
+        )
+
+    part = shown * 100 / raw if raw else 0.0
+    word = "run" if len(found) == 1 else "runs"
+    print(
+        f"\n{len(found)} {word} · {raw:,} B captured · {shown:,} B shown"
+        f" · {part:.1f}% of it · the other {100 - part:.1f}% is on disk, not gone"
+    )
     return 0
 
 

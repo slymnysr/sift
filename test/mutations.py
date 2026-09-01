@@ -46,7 +46,13 @@ class Mutation:
 
     @property
     def path(self) -> Path:
-        return SOURCE / self.file
+        """A bare name is a module of the tool; a path is relative to the repo.
+
+        The measurement scripts under `test/` decide what this project claims to
+        have measured, and a rule that only holds because nothing checks it is no
+        better there than in `src/`.
+        """
+        return ROOT / self.file if "/" in self.file else SOURCE / self.file
 
 
 # Split across adjacent literals only to stay inside the line limit: what they
@@ -194,20 +200,20 @@ MUTATIONS = [
     ),
     Mutation(
         "distill.py",
-        "a later piece is numbered as part of the whole capture",
-        "            windows.append((start + 1, lines[start:index]))",
-        "            windows.append((1, lines[start:index]))",
+        "every piece is numbered as part of the whole capture",
+        "    batches = _batches(list(enumerate(lines, 1)))",
+        "    batches = _batches([(1, line) for line in lines])",
     ),
     Mutation(
         "distill.py",
-        "the last piece is numbered as part of the whole capture too",
-        "    windows.append((start + 1, lines[start:]))",
-        "    windows.append((1, lines[start:]))",
+        "the first line of a capture is line one",
+        "    batches = _batches(list(enumerate(lines, 1)))",
+        "    batches = _batches(list(enumerate(lines, 0)))",
     ),
     Mutation(
         "distill.py",
         "a capture too long for one ask is split",
-        "        if size and size + cost > CHARS_PER_ASK:",
+        "        if current and size + cost > CHARS_PER_ASK:",
         "        if False:",
     ),
     Mutation(
@@ -364,14 +370,18 @@ MUTATIONS = [
     Mutation(
         "outline.py",
         "the outline is asked about the file and never about its name",
-        "    return select(read(path), QUESTION, str(path), bridge)",
-        "    return select([str(path), *read(path)], QUESTION, str(path), bridge)",
+        "    return select(read(path), QUESTION, str(path), bridge, budget=BUDGET)",
+        "    return select(\n"
+        "        [str(path), *read(path)], QUESTION, str(path), bridge, budget=BUDGET\n"
+        "    )",
     ),
     Mutation(
         "distill.py",
         "the question put to the model is the one the caller asked",
-        "        answer = judge.ask(question, numbered(window, first), max_tokens=2048)",
-        "        answer = judge.ask(QUESTION, numbered(window, first), max_tokens=2048)",
+        "    batches = _batches(list(enumerate(lines, 1)))\n"
+        "    asked = prompt(question, budget, len(batches))",
+        "    batches = _batches(list(enumerate(lines, 1)))\n"
+        "    asked = prompt(QUESTION, budget, len(batches))",
     ),
     Mutation(
         "peek.py",
@@ -434,6 +444,188 @@ MUTATIONS = [
         "every tool on offer is named in the instructions the calling model reads",
         '    name="peek",',
         '    name="slice",',
+    ),
+    # -- Faz 8: what a view is allowed to cost ------------------------------
+    Mutation(
+        "distill.py",
+        "a budget is divided between the asks, not repeated to each of them",
+        "    each = max(1, budget // asks)",
+        "    each = budget",
+    ),
+    Mutation(
+        "distill.py",
+        "a share of the budget never falls to nothing",
+        "    each = max(1, budget // asks)",
+        "    each = budget // asks",
+    ),
+    Mutation(
+        "distill.py",
+        "the budget reaches the model rather than only the docstring",
+        '    share = ceiling(budget, asks) if budget is not None else ""',
+        '    share = ""',
+    ),
+    Mutation(
+        "distill.py",
+        "every prompt ends with the one way of answering",
+        "    return question + share + ANSWER_FORMAT",
+        "    return question + share",
+    ),
+    Mutation(
+        "distill.py",
+        "an answer longer than the budget is handed back",
+        "    if budget is not None and len(chosen) > budget:",
+        "    if False:",
+    ),
+    Mutation(
+        "distill.py",
+        "the second pass is shown the lines it chose, with the numbers they had",
+        "        shortlist = [(number, lines[number - 1]) for number in sorted(chosen)]",
+        "        shortlist = list(enumerate(sorted(lines[n - 1] for n in chosen), 1))",
+    ),
+    Mutation(
+        "distill.py",
+        "the second pass asks a different question from the first",
+        "        asked = prompt(question + NARROWING, budget, len(batches))",
+        "        asked = prompt(question, budget, len(batches))",
+    ),
+    Mutation(
+        "distill.py",
+        "narrowing can drop a line and can never add one",
+        "                kept |= read_numbers(answer.text, len(lines)) & chosen",
+        "                kept |= read_numbers(answer.text, len(lines))",
+    ),
+    Mutation(
+        "distill.py",
+        "a round nobody answered leaves the answer before it standing",
+        "        if not kept or len(kept) >= len(chosen):",
+        "        if len(kept) >= len(chosen):",
+    ),
+    Mutation(
+        "distill.py",
+        "narrowing stops once it stops shortening anything",
+        "        if not kept or len(kept) >= len(chosen):",
+        "        if not kept:",
+    ),
+    Mutation(
+        "distill.py",
+        "an answer is handed back a fixed number of times and no more",
+        "    for _ in range(NARROW_ROUNDS):",
+        "    while True:",
+    ),
+    Mutation(
+        "outline.py",
+        "an outline is given the budget this module states, not the one distilling uses",
+        "    return select(read(path), QUESTION, str(path), bridge, budget=BUDGET)",
+        "    return select(read(path), QUESTION, str(path), bridge, budget=None)",
+    ),
+    Mutation(
+        "view.py",
+        "the bill is for the view, against what the capture would have cost",
+        "            raw_bytes=capture.meta.byte_count,",
+        "            raw_bytes=len(view.text.encode(\"utf-8\")),",
+    ),
+    Mutation(
+        "view.py",
+        "what is written down is the size of the view that was handed over",
+        '            shown_bytes=len(view.text.encode("utf-8")),',
+        "            shown_bytes=capture.meta.byte_count,",
+    ),
+    Mutation(
+        "store.py",
+        "bookkeeping that cannot be written costs the report and nothing else",
+        "    with contextlib.suppress(OSError):",
+        "    if True:",
+    ),
+    Mutation(
+        "store.py",
+        "a capture nobody viewed is left out rather than counted as free",
+        "        found = load_saving(meta.handle)\n"
+        "        if found is not None:\n"
+        "            pairs.append((meta, found))",
+        "        found = load_saving(meta.handle)\n"
+        "        if found is None:\n"
+        "            found = Saving(meta.handle, meta.byte_count, 0, 0, 0, None, 0)\n"
+        "        pairs.append((meta, found))",
+    ),
+    Mutation(
+        "cli.py",
+        "the report adds up the bytes the views actually cost",
+        "        shown += saving.shown_bytes",
+        "        shown += 0",
+    ),
+    # -- Faz 8: asking at once, and saying when an answer never came --------
+    Mutation(
+        "distill.py",
+        "the pieces of one capture are asked about at the same time",
+        "    if len(batches) == 1:",
+        "    if True:  # noqa: SIM108",
+    ),
+    Mutation(
+        "distill.py",
+        "how many are asked at once is what the caller asked for",
+        "    with ThreadPoolExecutor(max_workers=min(workers(), len(batches))) as pool:",
+        "    with ThreadPoolExecutor(max_workers=1) as pool:",
+    ),
+    Mutation(
+        "distill.py",
+        "how many at once never falls below one",
+        'return max(1, int(written)) if written.isdigit() else WORKERS',
+        'return int(written) if written.isdigit() else WORKERS',
+    ),
+    Mutation(
+        "distill.py",
+        "a question that came back with nothing is counted",
+        "            unanswered += 1",
+        "            unanswered += 0",
+    ),
+    Mutation(
+        "distill.py",
+        "the count of silent questions leaves the function it was counted in",
+        "        unanswered=unanswered,",
+        "        unanswered=0,",
+    ),
+    Mutation(
+        "view.py",
+        "the reader is told when part of the capture was never looked at",
+        '        f" · {who} · {meta.duration_s:.1f}s" + silence(view)',
+        '        f" · {who} · {meta.duration_s:.1f}s"',
+    ),
+    Mutation(
+        "view.py",
+        "silence is only reported when there was some",
+        "    if not view.unanswered:\n        return \"\"",
+        "    if True:\n        return \"\"",
+    ),
+    Mutation(
+        "view.py",
+        "the bill keeps the questions that came back with nothing",
+        "            unanswered=view.unanswered,",
+        "            unanswered=0,",
+    ),
+    # -- Faz 8: what the measurement may and may not blame ------------------
+    Mutation(
+        "test/budget.py",
+        "a sample nobody answered for is left out of the row rather than scored",
+        "    if view is None or view.unanswered:",
+        "    if view is None:",
+    ),
+    Mutation(
+        "test/budget.py",
+        "the row counts the samples it was actually able to use",
+        "    row.counted += 1",
+        "    row.counted += 0",
+    ),
+    Mutation(
+        "test/budget.py",
+        "a line lost with and without a ceiling is not charged to the ceiling",
+        "    cost = [line for line in default.missed if line not in without]",
+        "    cost = list(default.missed)",
+    ),
+    Mutation(
+        "test/budget.py",
+        "with no unbounded row to compare against, every miss is the ceiling's",
+        "        return list(default.missed), []",
+        "        return [], []",
     ),
 ]
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 import sys
+import threading
 from pathlib import Path
 
 import pytest
@@ -38,16 +39,25 @@ class _Judge:
 
     Replies are used in order; the last one keeps being used after that, so a
     test that does not care how many times it is asked does not have to count.
+
+    The pieces of one capture are asked about at the same time, so `ask` is
+    called from several threads. Recording the question and picking the reply
+    for it happen together under a lock, or two threads counting the same length
+    would be handed the same reply. A reply that is a function is called outside
+    the lock, because a test that proves the asking overlaps does it by making
+    one call wait for another.
     """
 
     def __init__(self, *replies, model: str = "test-model") -> None:
         self.replies = list(replies) or [""]
         self.model = model
         self.seen: list[tuple[str, str]] = []
+        self._turn = threading.Lock()
 
     def ask(self, system: str, user: str, *, max_tokens: int = 1024):
-        self.seen.append((system, user))
-        reply = self.replies[min(len(self.seen) - 1, len(self.replies) - 1)]
+        with self._turn:
+            self.seen.append((system, user))
+            reply = self.replies[min(len(self.seen) - 1, len(self.replies) - 1)]
         if callable(reply):
             reply = reply(user)
         if reply is None:
@@ -288,5 +298,237 @@ def test_every_piece_keeps_the_numbering_of_the_whole_capture():
             number, _, text = asked.partition("| ")
             assert original[int(number) - 1] == text
 
-    firsts = [prompt.splitlines()[0].partition("| ")[2] for _, prompt in judge.seen]
+    # Sorted by the number each piece starts at, because the pieces are asked
+    # about at the same time and no longer arrive in the order they were cut.
+    in_order = sorted(judge.seen, key=lambda pair: int(pair[1].partition("|")[0]))
+    firsts = [prompt.splitlines()[0].partition("| ")[2] for _, prompt in in_order]
     assert _shown(view) == firsts
+
+
+# -- Faz 8: what a view is allowed to cost ----------------------------------
+
+
+def _asked_about(prompt: str) -> list[int]:
+    """The line numbers one ask was shown, read back out of the prompt."""
+    return [int(line.partition("| ")[0]) for line in prompt.splitlines()]
+
+
+def test_the_budget_is_divided_between_asks_and_not_repeated_to_each():
+    """The bug this phase exists for, in one assertion.
+
+    A capture split into five asks used to be five times told to keep a hundred
+    lines. Every ask obeyed, and the view came back five hundred lines long --
+    which is how a tool that promises to cost a page ends up costing a chapter
+    on exactly the output nobody could read anyway. What each ask is told now
+    has to be a share of the whole, or the arithmetic is back.
+    """
+    judge = _Judge("1")
+    d.distill(_lines(20_000), judge)
+
+    asks = len(judge.seen)
+    assert asks > 1, "not enough pieces to divide anything between"
+    each = d.BUDGET // asks
+    assert each < d.BUDGET
+    for system, _ in judge.seen:
+        assert f"about {each} lines" in system
+
+
+def test_a_capture_that_fits_in_one_ask_is_told_the_whole_budget():
+    judge = _Judge("1")
+    d.distill(_lines(5), judge)
+
+    assert len(judge.seen) == 1
+    assert f"about {d.BUDGET} lines" in judge.seen[0][0]
+
+
+def test_a_share_never_falls_to_nothing():
+    """More asks than lines to go round still asks each for one, never for none."""
+    assert "about 1 line." in d.ceiling(3, 1000)
+    assert "about 2 lines." in d.ceiling(4, 2)
+
+
+def test_an_over_long_answer_is_handed_back_rather_than_cut():
+    """Too many lines is a question for the model, not arithmetic for the code.
+
+    The first answer keeps everything. The second is asked about that answer and
+    keeps a tenth of it. Nothing here chose which tenth, and nothing here could
+    have: dropping the short runs loses a lone failure, dropping the long ones
+    loses a stack trace, and dropping from the middle is a coin toss.
+    """
+    judge = _Judge("1-400", "1-40")
+    view = d.distill(_lines(400), judge)
+
+    assert view.kept == 40
+    assert view.asks == 2
+    assert _shown(view) == [f"satir {n}" for n in range(1, 41)]
+
+
+def test_the_second_pass_asks_a_different_question_from_the_first():
+    """Asked the same question twice, a model gives the same answer -- correctly.
+
+    A shortlist of lines that all matter is a right answer to "which lines
+    matter". Measured, that came back four asks and 359 lines against a budget
+    of 120. The round has to say what the list already is.
+    """
+    judge = _Judge("1-400", "1-40")
+    d.distill(_lines(400), judge)
+
+    first, second = (system for system, _ in judge.seen)
+    assert d.NARROWING not in first
+    assert d.NARROWING in second
+    assert second.startswith(d.QUESTION)
+
+
+def test_the_second_pass_is_shown_the_lines_it_chose_and_no_others():
+    """The shortlist is the first answer, still carrying the capture's numbers.
+
+    Renumbering it from one would make every answer about the shortlist point at
+    the top of the capture -- confidently, and wrongly.
+    """
+    judge = _Judge("200-400", "200-210")
+    view = d.distill(_lines(400), judge)
+
+    assert _asked_about(judge.seen[1][1]) == list(range(200, 401))
+    assert _shown(view) == [f"satir {n}" for n in range(200, 211)]
+    assert view.kept == 11
+
+
+def test_narrowing_can_only_drop_lines_and_never_add_one():
+    """A number from outside the shortlist is dropped rather than admitted.
+
+    A second pass that could widen would be a second chance to show a line the
+    first pass rejected, granted by a model that was never shown it.
+    """
+    judge = _Judge("1-200", "1-5, 380-400")
+    view = d.distill(_lines(400), judge)
+
+    assert _shown(view) == [f"satir {n}" for n in range(1, 6)]
+    assert view.kept == 5
+
+
+def test_a_round_that_answers_nothing_leaves_the_first_answer_standing():
+    """An unanswered question is not a decision to show nothing."""
+    view = d.distill(_lines(400), _Judge("1-300", None))
+
+    assert view.kept == 300
+    assert view.asks == 2
+
+
+def test_narrowing_stops_when_it_stops_shortening_anything():
+    """A model that will not narrow is asked once more, not three times more."""
+    view = d.distill(_lines(400), _Judge("1-400"))
+
+    assert view.kept == 400
+    assert view.asks == 2, "one first pass, one round that changed nothing"
+
+
+def test_a_view_still_over_budget_after_three_rounds_comes_back_long():
+    """The ceiling is a request, and the last word about length is the truth.
+
+    Three rounds of narrowing, each one shorter and none of them short enough.
+    What comes back is 200 lines against a budget of 120, and it says so --
+    which is worth more than 120 lines nobody chose.
+    """
+    judge = _Judge("1-1000", "1-800", "1-400", "1-200")
+    view = d.distill(_lines(1000), judge)
+
+    assert view.asks == 1 + d.NARROW_ROUNDS
+    assert view.kept == 200
+    assert view.kept > d.BUDGET
+
+
+def test_a_shortlist_too_long_for_one_ask_is_split_the_way_a_capture_is():
+    """The second pass reuses the first pass's splitting, numbering and all."""
+    judge = _Judge("1-20000")
+    view = d.distill(_lines(20_000), judge)
+
+    half = len(judge.seen) // 2
+    assert half > 1, "not enough pieces to prove the shortlist was split at all"
+    assert view.kept == 20_000, "this judge narrows nothing"
+    # Compared as sets: the first pass asks its pieces at the same time and the
+    # second pass asks them one after another, so the same pieces arrive in two
+    # different orders. What is being checked is that they are the same pieces.
+    assert sorted(p for _, p in judge.seen[:half]) == sorted(
+        p for _, p in judge.seen[half:]
+    )
+    assert all(len(prompt) <= d.CHARS_PER_ASK for _, prompt in judge.seen)
+
+
+def test_the_pieces_of_a_capture_are_asked_about_at_the_same_time():
+    """Seven questions asked one after another is seven waits.
+
+    Proved by making the answers depend on each other: a reply is only given
+    once two calls have met at the barrier. Asked one at a time the first call
+    waits alone until the barrier gives up, and nothing ever meets.
+    """
+    met = threading.Barrier(2, timeout=5)
+    overlapped = threading.Event()
+
+    def answer(_prompt: str) -> str:
+        try:
+            met.wait()
+            overlapped.set()
+        except threading.BrokenBarrierError:
+            pass
+        return "1-1"
+
+    judge = _Judge(answer)
+    view = d.distill(_lines(20_000), judge)
+
+    assert view.asks > 1, "one piece proves nothing about asking two at once"
+    assert overlapped.is_set(), "the pieces were asked about one after another"
+
+
+def test_a_question_that_came_back_with_nothing_is_counted():
+    """A view built from one answer out of many is not a short view."""
+    answers = iter(["1-3", None, None])
+    judge = _Judge(lambda _prompt: next(answers, None))
+
+    view = d.distill(_lines(20_000), judge)
+
+    assert view.asks > 1
+    assert view.unanswered == view.asks - 1
+    assert view.kept == 3
+
+
+def test_a_view_that_got_every_answer_counts_no_silence():
+    judge = _Judge("1-5")
+    view = d.distill(_lines(400), judge)
+
+    assert view.unanswered == 0
+
+
+def test_asking_one_piece_at_a_time_gives_the_same_answer(monkeypatch):
+    """Parallel is a claim about waiting, not about what comes back."""
+    monkeypatch.setenv("SIFT_WORKERS", "1")
+    serial = d.distill(_lines(20_000), _Judge(lambda p: p.split("|", 1)[0]))
+    monkeypatch.setenv("SIFT_WORKERS", "6")
+    parallel = d.distill(_lines(20_000), _Judge(lambda p: p.split("|", 1)[0]))
+
+    # Compared line by line rather than as whole text: every run gets its own
+    # handle, and the handle is printed in the gap markers.
+    assert _shown(serial) == _shown(parallel)
+    assert serial.kept == parallel.kept
+    assert _hidden(serial) == _hidden(parallel)
+
+
+def test_how_many_pieces_at_once_can_be_set_and_never_falls_below_one(monkeypatch):
+    monkeypatch.delenv("SIFT_WORKERS", raising=False)
+    assert d.workers() == d.WORKERS
+    monkeypatch.setenv("SIFT_WORKERS", "3")
+    assert d.workers() == 3
+    monkeypatch.setenv("SIFT_WORKERS", "0")
+    assert d.workers() == 1
+    monkeypatch.setenv("SIFT_WORKERS", "hepsi")
+    assert d.workers() == d.WORKERS
+
+
+def test_a_caller_may_ask_for_no_ceiling_at_all():
+    """`budget=None` says nothing about length and hands nothing back."""
+    body = [f"satir {n}" for n in range(1, 401)]
+    judge = _Judge("1-400")
+    view = d.select(body, d.QUESTION, "elde", judge, budget=None)
+
+    assert view.kept == 400
+    assert view.asks == 1
+    assert judge.seen[0][0] == d.QUESTION + d.ANSWER_FORMAT

@@ -14,10 +14,16 @@ Layout, one directory per capture:
 `raw` is opened in binary and never rewritten. `meta.json` is written once the
 command has finished, which also makes it the marker for a complete capture: a
 directory with `raw` but no `meta.json` is a run that was interrupted.
+
+A third file, `view.json`, is written when a view is built: what the capture
+cost and what the reader was handed instead. It is what `sift stats` adds up,
+and it sits beside the capture rather than in a log of its own so that removing
+a capture removes the claim made about it, with nothing left to keep in step.
 """
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import time
@@ -144,6 +150,74 @@ def recent(limit: int = 20) -> list[Meta]:
     metas = [m for m in (load(p.name) for p in d.iterdir() if p.is_dir()) if m is not None]
     metas.sort(key=lambda m: m.started_at, reverse=True)
     return metas[:limit]
+
+
+@dataclass(frozen=True)
+class Saving:
+    """What one view cost, next to what it stood for."""
+
+    handle: str
+    raw_bytes: int
+    shown_bytes: int
+    kept: int
+    total: int
+    model: str | None
+    asks: int
+    # Defaulted, so that a report written before this field existed still loads
+    # as what it was: a run nobody had counted the silent questions of.
+    unanswered: int = 0
+
+    @property
+    def part(self) -> float:
+        """The share of the capture the reader was actually handed, as a percent."""
+        return self.shown_bytes * 100 / self.raw_bytes if self.raw_bytes else 0.0
+
+
+def view_path(handle: str) -> Path:
+    return captures_dir() / handle / "view.json"
+
+
+def record(saving: Saving) -> None:
+    """Write down what a view cost, and never let the writing cost anything.
+
+    A full disk, a read-only cache, a directory swept up between the run and the
+    view -- none of those are reasons for a caller to lose the output they asked
+    for. Of everything this tool does, the bookkeeping is the part that may fail
+    silently, because it is the only part nobody asked for.
+    """
+    with contextlib.suppress(OSError):
+        view_path(saving.handle).write_text(
+            json.dumps(asdict(saving), ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+
+
+def load_saving(handle: str) -> Saving | None:
+    """What a view of this capture cost, or None if no view was ever built."""
+    p = view_path(handle)
+    if not p.is_file():
+        return None
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    fields = {f for f in Saving.__dataclass_fields__}
+    return Saving(**{k: v for k, v in data.items() if k in fields})
+
+
+def savings(limit: int = 20) -> list[tuple[Meta, Saving]]:
+    """Of the last `limit` runs, those that produced a view, newest first.
+
+    Runs without one are left out rather than counted as saving nothing: a
+    capture whose view was never built has not been measured, and a report that
+    quietly averaged it in would understate the tool by exactly the number of
+    times somebody ran `sift list`.
+    """
+    pairs = []
+    for meta in recent(limit):
+        found = load_saving(meta.handle)
+        if found is not None:
+            pairs.append((meta, found))
+    return pairs
 
 
 def now() -> float:

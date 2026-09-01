@@ -30,7 +30,7 @@ import pytest
 from mcp import Client, StdioServerParameters
 
 from sift import server as s
-from sift import view
+from sift import store, view
 
 MARKER = re.compile(r"^─ ([\d,]+) lines? not shown · sift peek (\S+) for any of them ─$")
 
@@ -297,3 +297,17 @@ async def test_a_real_client_is_given_a_sentence_and_not_a_crash(tmp_path):
         answer = _text(await client.call_tool("outline", {"path": str(tmp_path / "yok")}))
 
     assert answer.startswith("sift: ")
+
+
+def test_a_run_over_the_wire_is_billed_the_way_one_at_a_terminal_is(counting):
+    """Faz 8's report counts both front ends or it is not about the tool.
+
+    The bill is drawn in `view.py`, beside the ladder, so a client's run turns up
+    in `sift stats` next to a person's without either front end being asked to
+    remember. Neither of them mentions the store at all.
+    """
+    saving = store.load_saving(_handle(s.run(counting)))
+
+    assert saving is not None
+    assert saving.total == 401
+    assert saving.shown_bytes < saving.raw_bytes

@@ -172,7 +172,7 @@ def test_the_prompt_carries_the_file_and_never_the_file_name(sample):
     judge = _Chooser(sample.must_show)
     o.outline(_path(sample), judge)
     system, asked = judge.seen[-1]
-    assert system == o.QUESTION
+    assert system.startswith(o.QUESTION)
     for leak in (sample.name, str(_path(sample)), _path(sample).name):
         assert leak not in asked, f"{sample.name}: istem {leak!r} sizdirdi"
     numbered_lines = text_lines.of(asked)

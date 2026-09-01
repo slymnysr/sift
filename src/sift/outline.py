@@ -28,20 +28,21 @@ from __future__ import annotations
 from pathlib import Path
 
 from sift import lines as text_lines
-from sift.distill import ANSWER_FORMAT, View, select
+from sift.distill import View, select
 from sift.fallback import from_lines
 from sift.model import Bridge
 
 # An outline is a table of contents, and a table of contents that runs past a
 # screen has stopped being one.
 #
-# This is asked for and not enforced. Cutting an over-long answer back to size
-# would mean deciding which declarations matter least, and deciding that without
-# reading the language is the guess this file exists to avoid: it would want to
-# know what "nested" looks like here, which is indentation in one language,
-# braces in the next, and neither in the one after. An outline that came back
-# long is visible anyway -- the view says how many lines it kept out of how many
-# -- where a quietly trimmed one would not be.
+# The number is stated here and spent by `select`, which divides it across
+# however many asks the file takes and hands an over-long answer back rather than
+# cutting it. Cutting here is what this module cannot do: deciding which
+# declarations matter least means knowing what "nested" looks like, which is
+# indentation in one language, braces in the next, and neither in the one after
+# -- the guess this file exists to avoid. Asked again, the model does the ranking
+# it is the only one here able to do; and an outline that comes back long anyway
+# is visible, because the view says how many lines it kept out of how many.
 BUDGET = 120
 
 QUESTION = (
@@ -53,9 +54,8 @@ QUESTION = (
     "annotates the declaration, or that continues its signature.\n"
     "Leave out the bodies: the statements inside a definition, and anything that "
     "says how a thing works rather than that it exists.\n"
-    f"Keep the answer under about {BUDGET} lines. If the file declares more than "
-    "that, keep the outermost declarations and leave the nested ones out.\n"
-    + ANSWER_FORMAT
+    "If more declarations qualify than the answer has room for, keep the "
+    "outermost ones and leave the nested ones out.\n"
 )
 
 
@@ -77,8 +77,12 @@ def outline(path: str | Path, bridge: Bridge | None = None) -> View | None:
     and `sift peek` will take it. Returns nothing when there is no usable
     judgement, exactly as `distill` does, and for the same reason: a view that
     pretended to have been chosen would be worse than one that admits it wasn't.
+
+    The budget is passed rather than left to default, because a table of contents
+    and a failing build are not the same length for the same reasons even when
+    the number happens to match.
     """
-    return select(read(path), QUESTION, str(path), bridge)
+    return select(read(path), QUESTION, str(path), bridge, budget=BUDGET)
 
 
 def ends_of(path: str | Path) -> View:
