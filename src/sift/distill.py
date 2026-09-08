@@ -177,6 +177,11 @@ class View:
     # deciding this separately is two places that can disagree about what a
     # number means, and the number is the whole of what a footer says.
     unit: str = "line"
+    # What the asking cost, in the endpoint's own tokens, summed over every ask
+    # this view took. Zero when no model was reached and zero when the answer
+    # was remembered -- both of which are true, and both of which are the point
+    # of counting it.
+    tokens: int = 0
 
     @property
     def folded(self) -> int:
@@ -377,20 +382,23 @@ def select(
     unanswered = 0
     asks = 0
 
+    spent = 0
     for answer in _ask_all(judge, asked, batches):
         asks += 1
         if answer is None:
             unanswered += 1
             continue
         model = answer.model
+        spent += answer.tokens
         chosen |= read_numbers(answer.text, len(lines), first)
 
     if not chosen and not always:
         return None
 
     if budget is not None and len(chosen) > budget:
-        chosen, spent = narrow(lines, chosen, question, budget, judge, first)
-        asks += spent
+        chosen, rounds, cost = narrow(lines, chosen, question, budget, judge, first)
+        asks += rounds
+        spent += cost
 
     # Written after narrowing and before `keep`, so what is remembered is the
     # model's judgement under this ceiling and nothing the caller added to it.
@@ -410,6 +418,7 @@ def select(
         asks=asks,
         unanswered=unanswered,
         unit=unit,
+        tokens=spent,
     )
 
 
@@ -469,7 +478,7 @@ def narrow(
     budget: int,
     judge: Bridge,
     first: int = 1,
-) -> tuple[set[int], int]:
+) -> tuple[set[int], int, int]:
     """Hand an over-long answer back and ask which part of it to keep.
 
     The alternative was to cut it here, and cutting means ranking lines with code
@@ -492,6 +501,7 @@ def narrow(
     cost and has already been refused three times.
     """
     asks = 0
+    spent = 0
     for _ in range(NARROW_ROUNDS):
         if len(chosen) <= budget:
             break
@@ -503,11 +513,12 @@ def narrow(
             answer = ask_one(judge, asked, batch)
             asks += 1
             if answer is not None:
+                spent += answer.tokens
                 kept |= read_numbers(answer.text, len(lines), first) & chosen
         if not kept or len(kept) >= len(chosen):
             break
         chosen = kept
-    return chosen, asks
+    return chosen, asks, spent
 
 
 def prompt(question: str, budget: int | None, asks: int) -> str:

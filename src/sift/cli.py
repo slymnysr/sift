@@ -611,15 +611,18 @@ def _stats(args: list[str]) -> int:
 
     print(
         f"{'handle':8}  {'captured':>12}  {'shown':>10}  {'part':>6}"
-        f"  {'asks':>4}  command"
+        f"  {'asks':>4}  {'tokens':>8}  command"
     )
-    raw = shown = 0
+    raw = shown = spent = counted = 0
     for meta, saving in found:
         raw += saving.raw_bytes
         shown += saving.shown_bytes
+        spent += saving.tokens
+        counted += 1 if saving.tokens else 0
+        cost = f"{saving.tokens:>8,}" if saving.tokens else f"{'—':>8}"
         print(
             f"{saving.handle:8}  {saving.raw_bytes:>10,} B  {saving.shown_bytes:>8,} B"
-            f"  {saving.part:>5.1f}%  {saving.asks:>4}  {' '.join(meta.command)}"
+            f"  {saving.part:>5.1f}%  {saving.asks:>4}  {cost}  {' '.join(meta.command)}"
         )
 
     part = shown * 100 / raw if raw else 0.0
@@ -628,6 +631,15 @@ def _stats(args: list[str]) -> int:
         f"\n{len(found)} {word} · {raw:,} B captured · {shown:,} B shown"
         f" · {part:.1f}% of it · the other {100 - part:.1f}% is on disk, not gone"
     )
+    # Two numbers, and they are not the same kind of number. The share above is
+    # this tool's own arithmetic over bytes it holds, so it is exact. The cost
+    # below is the endpoint's count of its own tokens, so it is measured rather
+    # than estimated -- and a run that nobody counted is left out of it and said
+    # so, instead of being filled in with bytes divided by four.
+    if spent:
+        missing = len(found) - counted
+        unsaid = f", {missing} not counted" if missing else ""
+        print(f"cost {spent:,} tokens, as the endpoint counted them{unsaid}")
     return 0
 
 

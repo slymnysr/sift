@@ -55,9 +55,13 @@ class _Judge:
     one call wait for another.
     """
 
-    def __init__(self, *replies, model: str = "test-model") -> None:
+    def __init__(self, *replies, model: str = "test-model", tokens: int = 0) -> None:
         self.replies = list(replies) or [""]
         self.model = model
+        # What each answer claims to have cost. Zero by default, which is what an
+        # endpoint that did not say costs, and what every test that is not about
+        # counting should see.
+        self.tokens = tokens
         self.seen: list[tuple[str, str]] = []
         self._turn = threading.Lock()
 
@@ -69,7 +73,7 @@ class _Judge:
             reply = reply(user)
         if reply is None:
             return None
-        return Answer(text=reply, model=self.model, tries=1)
+        return Answer(text=reply, model=self.model, tries=1, tokens=self.tokens)
 
     @property
     def prompt(self) -> str:

@@ -288,6 +288,11 @@ class Saving:
     # Defaulted, so that a report written before this field existed still loads
     # as what it was: a run nobody had counted the silent questions of.
     unanswered: int = 0
+    # What the asking cost, in the endpoint's own tokens. Defaulted for the same
+    # reason and read the same way: zero means nobody counted, not that it was
+    # free. A report that told those two apart by guessing would be inventing
+    # the only number here that is not this tool's own arithmetic.
+    tokens: int = 0
 
     @property
     def part(self) -> float:

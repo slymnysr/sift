@@ -740,6 +740,31 @@ MUTATIONS = [
         '    return f"{name} (remembered)" if view.model and view.asks == 0 else name',
         "    return name",
     ),
+    # -- Faz 23: what the report counts --------------------------------------
+    Mutation(
+        "model.py",
+        "what an ask cost is read from the reply, never worked out from bytes",
+        '        return max(0, int(usage["total_tokens"]))',
+        "        return max(0, len(body) // 4)",
+    ),
+    Mutation(
+        "model.py",
+        "a reply that did not count is zero, not an estimate",
+        "        return 0\n\n\ndef _as_float",
+        "        return len(body) // 4\n\n\ndef _as_float",
+    ),
+    Mutation(
+        "distill.py",
+        "a second pass is a second request and is counted",
+        "                spent += answer.tokens",
+        "                pass",
+    ),
+    Mutation(
+        "cli.py",
+        "a run nobody counted is left out of the total rather than filled in",
+        "        counted += 1 if saving.tokens else 0",
+        "        counted += 1",
+    ),
     # -- Faz 9: a command left running ---------------------------------------
     Mutation(
         "background.py",

@@ -183,6 +183,12 @@ went, which command has never once worked here — and a model asked to count is
 slower, costs a request and is sometimes wrong. The model decides what cannot be
 computed, and nothing else.
 
+`sift stats` says what the shortening saved and what it cost, and keeps those
+two apart: the share is this tool's own arithmetic over bytes it holds, so it is
+exact, while the cost is the endpoint's count of its own tokens, so it is
+measured. A run the endpoint did not count is left out and said so, rather than
+filled in with bytes divided by four.
+
 `--keep PATTERN` shows every line matching it whatever else was chosen and
 whatever the budget says. It is your pattern, not one this tool guessed at —
 the only place a pattern decides anything here, and it decides nothing until

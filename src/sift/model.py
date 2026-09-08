@@ -78,6 +78,13 @@ class Answer:
     text: str
     model: str
     tries: int
+    # What the endpoint says this exchange cost, in its own tokens. Read from
+    # the reply rather than worked out here: a token count computed by dividing
+    # bytes by four is a guess wearing the clothes of a measurement, and it is
+    # wrong by different amounts in every language this tool is pointed at.
+    # Zero when the reply did not say, which is the honest answer to "how many"
+    # when nobody counted.
+    tokens: int = 0
 
 
 Transport = Callable[..., Reply]
@@ -190,7 +197,12 @@ class Bridge:
                     text = _said(reply.body)
                     if text is not None:
                         self.last_error = None
-                        return Answer(text=text, model=model, tries=tries)
+                        return Answer(
+                            text=text,
+                            model=model,
+                            tries=tries,
+                            tokens=_spent(reply.body),
+                        )
                     self.last_error = f"{model}: reply could not be read"
                     break  # the same model will phrase it the same way again
 
@@ -245,6 +257,26 @@ def _said(body: bytes) -> str | None:
     if not isinstance(content, str) or not content.strip():
         return None
     return content
+
+
+def _spent(body: bytes) -> int:
+    """What the endpoint says the exchange cost, or zero if it did not say.
+
+    Measured, and that is the whole point of reading it rather than estimating
+    it. The alternative on offer is bytes divided by four, which is a rule of
+    thumb about English prose being sold as a count -- and this tool is pointed
+    at Japanese, at Turkish, at base64 and at stack traces, where it is wrong by
+    a factor rather than a margin.
+
+    Zero is not a failure and is not treated as one. It means nobody counted,
+    and a report that filled that in with arithmetic would be publishing its own
+    guess as the endpoint's number.
+    """
+    try:
+        usage = json.loads(body)["usage"]
+        return max(0, int(usage["total_tokens"]))
+    except (json.JSONDecodeError, UnicodeDecodeError, KeyError, TypeError, ValueError):
+        return 0
 
 
 def _as_float(written: str | None, fallback: float, given: float | None) -> float:
