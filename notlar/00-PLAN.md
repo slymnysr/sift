@@ -76,6 +76,7 @@ sonraki faza geçilmez.
 | 25 | Teklif | en çok kazandıran parça kendini tanıtsın; başkasının ayar dosyasına güvenle yazsın | bitti — [25-TEKLIF.md](25-TEKLIF.md) |
 | 26 | Beklemek | cevap vermeyecek basamağı beklemeyi bırak; merdiveni ölçüme göre kur | bitti — [26-BEKLEMEK.md](26-BEKLEMEK.md) |
 | 27 | Windows | CI'ın gösterdiği iki gerçek hata: `alive()` süreç öldürüyordu, izolasyon `~`'ı bulamıyordu | bitti — [27-WINDOWS.md](27-WINDOWS.md) |
+| 28 | Kurulum | yabancının izlediği yol sınandı; `pip install` Debian/WSL'de reddediliyor | bitti — [28-KURULUM.md](28-KURULUM.md) |
 
 ## Ek fazlar — neden sonradan çıktılar
 

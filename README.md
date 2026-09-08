@@ -223,10 +223,16 @@ result is re-sent on every turn that follows it, so a build log kept out of a
 transcript goes on staying out of it.
 
 ```bash
-pip install "sift-cli[mcp]"
-export SIFT_API_KEY=nvapi-...     # yours; see Installing
-claude mcp add sift -- sift-mcp
+uv tool install "sift-cli[mcp]"   # or pipx; see Installing
+claude mcp add --scope user sift -- sift-mcp
 ```
+
+The key is read from `~/.config/nvidia/api_key`, so it does not have to be in
+the environment and does not have to be pasted anywhere. `--scope user` puts the
+server in every project rather than the one you happen to be in.
+
+Then **restart the client**. MCP servers are connected when a session starts, so
+the session you ran that command in will not see this one.
 
 Without a key the server starts and every tool that would need a model declines
 with an explanation, so the agent falls back to its own shell rather than being
@@ -245,9 +251,25 @@ the lines or none could be reached.
 ## Installing
 
 ```bash
-pip install sift-cli            # the command line, no dependencies at all
-pip install "sift-cli[mcp]"     # and the MCP server
+uv tool install sift-cli            # the command line, no dependencies at all
+uv tool install "sift-cli[mcp]"     # and the MCP server
 ```
+
+`pipx install` does the same thing. Either puts `sift` and `sift-mcp` on your
+PATH in an environment of their own, which is what you want for a command-line
+tool: nothing here belongs in the Python you build with.
+
+Plain `pip install sift-cli` works inside a virtualenv you have already
+activated. It does **not** work against the system Python on Debian, Ubuntu, or
+WSL — those ship a `EXTERNALLY-MANAGED` marker and pip refuses, by design:
+
+```
+error: externally-managed-environment
+× This environment is externally managed
+```
+
+That refusal is right and the answer is not `--break-system-packages`. Use `uv
+tool` or `pipx`.
 
 The package is `sift-cli` and the commands are `sift` and `sift-mcp`. The names
 differ because `sift-mcp` on PyPI belongs to somebody else's project — an
