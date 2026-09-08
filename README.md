@@ -116,10 +116,20 @@ Three switches:
 SIFT_NO_MODEL=1   # never send anything; use the deterministic view
 SIFT_MASK=0       # send unmasked
 SIFT_CACHE=0      # ask again, even about text already answered
+SIFT_EFFORT=low   # let the model think less, and lose some of what matters
+SIFT_PATIENCE=0   # one quick pass only; do not wait out a busy hour
 ```
 
 Masking is not complete and does not claim to be: a bare secret shaped like
 nothing in particular gets through. `SIFT_NO_MODEL` is the one that guarantees.
+
+The fourth is a measured trade and is off by default. Asked which lines matter
+in a 404-line build, the model writes about 900 tokens of reasoning to produce a
+twelve-token answer, and you wait 15 seconds for it. At `SIFT_EFFORT=low` the
+same question takes 2.4 seconds — and over the corpus it loses 7.8% of the lines
+a reader could not do without, in exactly the places this tool exists for: a
+mainframe job's return code, a crash loop's diagnosis. Speed is available; it is
+not the default, and the price is written down.
 
 The third is about not paying twice. An answer already given for exactly these
 bytes and exactly this question is used again instead of bought again — and what

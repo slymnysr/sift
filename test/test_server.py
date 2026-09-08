@@ -251,11 +251,20 @@ def test_the_tool_still_works_for_someone_who_never_installed_mcp():
 
 
 def test_and_the_test_above_would_have_noticed():
-    """Teeth: the block has to be able to block, or the test above proves nothing."""
+    """Teeth: the block has to be able to block, or the test above proves nothing.
+
+    What comes out is also the second thing being checked. `pip install
+    sift-mcp` and then `claude mcp add` is an ordinary thing to do wrong, and
+    what the client shows for it used to be a `ModuleNotFoundError` traceback
+    pointing into somebody else's site-packages. A sentence naming the one
+    command that fixes it is worth more than a stack that names the cause.
+    """
     finished = _without_mcp("import sift.server\n")
 
     assert finished.returncode != 0
-    assert "mcp is not installed" in finished.stderr
+    assert 'pip install "sift-mcp[mcp]"' in finished.stderr
+    assert "Traceback" not in finished.stderr
+    assert "`sift`) is already installed" in finished.stderr
 
 
 # -- over the real transport -------------------------------------------------

@@ -26,7 +26,21 @@ from __future__ import annotations
 
 import time
 
-from mcp.server.mcpserver import MCPServer
+try:
+    from mcp.server.mcpserver import MCPServer
+except ImportError as exc:
+    # A sentence, not a stack. `pip install sift-mcp` brings nothing with it on
+    # purpose -- somebody who wants the command line should not be made to carry
+    # a protocol library for it -- so arriving here is an ordinary thing to do
+    # wrong, and the client that started this shows whatever comes out of it.
+    raise SystemExit(
+        "sift-mcp: the server half needs one more package.\n"
+        "\n"
+        '    pip install "sift-mcp[mcp]"\n'
+        "\n"
+        "The command line (`sift`) is already installed and works without it."
+    ) from exc
+
 
 from sift import __version__, store
 from sift.background import launch, seen, unread, wait_for

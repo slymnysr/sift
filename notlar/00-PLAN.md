@@ -74,6 +74,7 @@ sonraki faza geçilmez.
 | 23 | Ölçüm birimi | `stats` baytı değil, kurulan kişinin sorduğu şeyi saysın | bitti — [23-OLCUM-BIRIMI.md](23-OLCUM-BIRIMI.md) |
 | 24 | Anahtar | kurulumu bitmemiş makine sessiz kalmasın; ajana daha kötü cevap verilmesin | bitti — [24-ANAHTAR.md](24-ANAHTAR.md) |
 | 25 | Teklif | en çok kazandıran parça kendini tanıtsın; başkasının ayar dosyasına güvenle yazsın | bitti — [25-TEKLIF.md](25-TEKLIF.md) |
+| 26 | Beklemek | cevap vermeyecek basamağı beklemeyi bırak; merdiveni ölçüme göre kur | bitti — [26-BEKLEMEK.md](26-BEKLEMEK.md) |
 
 ## Ek fazlar — neden sonradan çıktılar
 

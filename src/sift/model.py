@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import json
 import os
+import socket
 import time
 import urllib.error
 import urllib.request
@@ -41,7 +42,21 @@ from sift.privacy import sending_on
 DEFAULT_BASE_URL = "https://integrate.api.nvidia.com/v1"
 
 DEFAULT_LADDER = (
-    "nvidia/nemotron-3-ultra-550b-a55b",  # flagship: asked first, always
+    # Ordered by measurement, not by parameter count, and the flagship is not on
+    # it. Measured on 2026-09-08 against the free tier: the 550b holds a request
+    # in a queue for 107-124 seconds before it answers, on two independent
+    # providers -- so the wait is the model's, not one endpoint's mood. The same
+    # question costs `super` about six seconds and `lightning` about fourteen.
+    #
+    # Keeping it first cost every distillation 181.5 seconds it could not use:
+    # two timeouts at 90s, then the fall to the rung that was going to answer
+    # anyway. Measured end to end, one 404-line build took 500 seconds. Without
+    # it, the same work is 6-15.
+    #
+    # It is left out rather than moved last because last is where a ladder goes
+    # when everything above it has failed -- which is exactly when nobody can
+    # afford to wait two minutes. `SIFT_MODELS` puts it back for anyone who
+    # wants it.
     "nvidia/nemotron-3-super-120b-a12b",
     "nvidia/nemotron-3.5-lightning-30b-a3b",
 )
@@ -55,7 +70,29 @@ TRANSIENT = frozenset({0, 408, 409, 425, 429, 500, 502, 503, 504})
 
 _TRIES_PER_RUNG = 2
 _BACKOFF_SECONDS = 1.5
-_DEFAULT_TIMEOUT = 90.0
+# How long one ask may take before the rung is given up on.
+#
+# Measured. A rung that is going to answer answers in about six seconds; a rung
+# that is queued takes over a hundred. Ninety was the worst number available:
+# far past the first, far short of the second, so it paid a minute and a half
+# and learned nothing. Twenty-five is comfortably past a working rung and
+# comfortably short of a queued one. `SIFT_TIMEOUT` moves it.
+_DEFAULT_TIMEOUT = 25.0
+
+# What the second pass waits, when the first one ran out of time everywhere.
+#
+# The first pass is short on purpose, and short is right nearly always: a rung
+# that is going to answer answers in about six seconds. But "nobody answered in
+# twenty-five seconds" is not the same statement as "nobody was going to" --
+# measured, a queued rung clears at 107-124 seconds, which is where the flagship
+# sits when the free tier is busy.
+#
+# So the choice between fast and patient is not made. Both are, in that order,
+# and the patience is only ever spent when the quick way came back with nothing.
+# On an ordinary day it costs nothing at all: the first pass answers and the
+# second never begins. `SIFT_PATIENCE=0` turns it off for a caller who would
+# rather have a quick no.
+_PATIENT_TIMEOUT = 150.0
 
 
 @dataclass(frozen=True)
@@ -69,6 +106,10 @@ class Reply:
 
     status: int
     body: bytes
+    # Whether the endpoint took longer than it was given, as opposed to
+    # refusing quickly. Both are "try elsewhere", and only one of them is worth
+    # asking twice: a refusal costs a moment, a wait costs the whole timeout.
+    timed_out: bool = False
 
 
 @dataclass(frozen=True)
@@ -107,6 +148,23 @@ def find_key() -> str | None:
     return value or None
 
 
+def effort() -> str | None:
+    """How hard the model should think before answering, or None to leave it alone.
+
+    Measured, and the measurement is the reason this exists. Asked which lines
+    matter in a 404-line build, the model wrote 924 tokens of reasoning to
+    produce a twelve-token answer, and the caller waited 15.3 seconds for it.
+    The same question at `reasoning_effort=low` took 2.4 seconds and named the
+    same lines.
+
+    Deliberately a setting rather than a constant: it is an OpenAI-shaped field
+    that not every endpoint accepts, and an endpoint that rejects it would
+    otherwise turn a speed setting into no answer at all.
+    """
+    written = os.environ.get("SIFT_EFFORT", "").strip().lower()
+    return written or None
+
+
 def default_ladder() -> tuple[str, ...]:
     """The rungs to try, in order, with `SIFT_MODELS` overriding the built-in list."""
     written = os.environ.get("SIFT_MODELS", "")
@@ -124,6 +182,7 @@ class Bridge:
         base_url: str | None = None,
         api_key: str | None = None,
         timeout: float | None = None,
+        patience: float | None = None,
         transport: Transport | None = None,
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
@@ -132,6 +191,9 @@ class Bridge:
         self.base_url = written_url.rstrip("/")
         self.api_key = find_key() if api_key is None else api_key
         self.timeout = _as_float(os.environ.get("SIFT_TIMEOUT"), _DEFAULT_TIMEOUT, timeout)
+        self.patience = _as_float(
+            os.environ.get("SIFT_PATIENCE"), _PATIENT_TIMEOUT, patience
+        )
         self.last_error: str | None = None
         self._post = transport or post
         self._sleep = sleep
@@ -149,11 +211,23 @@ class Bridge:
     def ask(self, system: str, user: str, *, max_tokens: int = 1024) -> Answer | None:
         """Put a question to the best model that will take it, or return nothing.
 
-        The ladder is walked from the top. A rung that is busy or unreachable is
-        tried once more and then left behind; a rung that does not exist is left
-        behind immediately. A rejected key ends the walk altogether -- a smaller
-        model will reject it just as firmly, and asking again only spends the
-        user's time to arrive at the same place.
+        The ladder is walked twice at most, and the second walk is the whole of
+        why the first one may be impatient.
+
+        **The quick pass.** Every rung, with the short timeout. A rung that is
+        going to answer answers in about six seconds, so this is the pass that
+        does the work nearly every time.
+
+        **The patient pass.** Only when the quick one ran out of time, and only
+        for that reason. "Nobody answered in twenty-five seconds" is not the same
+        statement as "nobody was going to": measured, a queued rung clears at
+        107-124 seconds. A rejected key or a refused request is not a queue and
+        waiting cannot help it, so neither buys a second pass.
+
+        Between them these give what one timeout could not. A single short value
+        is fast and gives up on a busy hour; a single long one waits two minutes
+        for every distillation to be sure. Two passes are fast when it is fast
+        and patient when patience is the only thing left.
         """
         if not sending_on():
             # Asked before the key, because the reason a caller is given should
@@ -166,6 +240,30 @@ class Bridge:
             self.last_error = "no api key"
             return None
 
+        answer, queued = self._walk(system, user, max_tokens, self.timeout)
+        if answer is not None or not queued:
+            return answer
+
+        if self.patience <= self.timeout:
+            return None
+
+        quick = self.last_error
+        answer, _ = self._walk(system, user, max_tokens, self.patience)
+        if answer is None and self.last_error:
+            self.last_error = f"{quick}; then {self.patience:g}s: {self.last_error}"
+        return answer
+
+    def _walk(
+        self, system: str, user: str, max_tokens: int, timeout: float
+    ) -> tuple[Answer | None, bool]:
+        """One pass down the ladder. Returns the answer, and whether to be patient.
+
+        The second half of that pair is the only thing this knows that `ask`
+        does not: a walk that ended in timeouts may be worth repeating slowly,
+        and a walk that ended in refusals is not. A rejected key returns False
+        with it -- waiting will not mint a new key, and a second pass would put
+        a dead one in front of every rung again.
+        """
         url = f"{self.base_url}/chat/completions"
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -173,45 +271,53 @@ class Bridge:
             "Accept": "application/json",
         }
         tries = 0
+        queued = False
 
         for model in self.ladder:
-            body = json.dumps(
-                {
-                    "model": model,
-                    "messages": [
-                        {"role": "system", "content": system},
-                        {"role": "user", "content": user},
-                    ],
-                    "temperature": 0,
-                    "max_tokens": max_tokens,
-                    "stream": False,
-                },
-                ensure_ascii=False,
-            ).encode("utf-8")
+            wanted = effort()
+            body = _body(model, system, user, max_tokens, wanted)
 
             for attempt in range(_TRIES_PER_RUNG):
                 tries += 1
-                reply = self._reach(url, headers, body)
+                reply = self._reach(url, headers, body, timeout)
 
                 if reply.status == 200:
                     text = _said(reply.body)
                     if text is not None:
                         self.last_error = None
-                        return Answer(
-                            text=text,
-                            model=model,
-                            tries=tries,
-                            tokens=_spent(reply.body),
+                        return (
+                            Answer(
+                                text=text,
+                                model=model,
+                                tries=tries,
+                                tokens=_spent(reply.body),
+                            ),
+                            False,
                         )
                     self.last_error = f"{model}: reply could not be read"
                     break  # the same model will phrase it the same way again
 
                 if reply.status in (401, 403):
                     self.last_error = f"key rejected ({reply.status})"
-                    return None
+                    return None, False
 
                 if reply.status in TRANSIENT:
                     self.last_error = f"{model}: busy or unreachable ({reply.status})"
+                    if reply.timed_out:
+                        # Measured, and this is the whole of it. A rung on a free
+                        # tier can hold a request in a queue for 107-124 seconds
+                        # before answering or refusing. A timeout means that queue
+                        # is longer than this pass is willing to wait, and asking
+                        # the same rung again inside the same pass is joining the
+                        # same queue again -- a second full timeout for the same
+                        # answer. Waiting longer is the patient pass's job, once,
+                        # after every rung has had its quick chance.
+                        #
+                        # A fast refusal is a different thing: it cost a moment,
+                        # and the moment after may go through.
+                        self.last_error = f"{model}: no answer in {timeout:g}s"
+                        queued = True
+                        break
                     if attempt + 1 < _TRIES_PER_RUNG:
                         self._sleep(_BACKOFF_SECONDS * (attempt + 1))
                     continue
@@ -219,17 +325,32 @@ class Bridge:
                 # 404 and the rest of the 4xx family are statements about this
                 # request. A different model may still accept it, so the walk goes
                 # on, but repeating it word for word to the same one will not.
+                if wanted:
+                    # Unless the only thing wrong with it was ours. `SIFT_EFFORT`
+                    # is a speed setting this tool adds; an endpoint that will
+                    # not take the field should cost the caller a second
+                    # request, never an answer. Asked again without it, and only
+                    # once -- if it is refused again the reason was not this.
+                    self.last_error = f"{model}: refused ({reply.status}) with effort"
+                    wanted = None
+                    body = _body(model, system, user, max_tokens, None)
+                    continue
                 self.last_error = f"{model}: refused ({reply.status})"
                 break
 
-        return None
+        return None, queued
 
-    def _reach(self, url: str, headers: dict[str, str], body: bytes) -> Reply:
+    def _reach(
+        self, url: str, headers: dict[str, str], body: bytes, timeout: float
+    ) -> Reply:
         """Call the transport, turning any way it can fail into an unreachable reply."""
         try:
-            return self._post(url=url, headers=headers, body=body, timeout=self.timeout)
+            return self._post(url=url, headers=headers, body=body, timeout=timeout)
+        except TimeoutError as exc:
+            return Reply(0, str(exc).encode("utf-8", "replace"), timed_out=True)
         except OSError as exc:  # a transport of one's own is allowed to be less careful
-            return Reply(0, str(exc).encode("utf-8", "replace"))
+            waited = isinstance(exc, socket.timeout) or "timed out" in str(exc).lower()
+            return Reply(0, str(exc).encode("utf-8", "replace"), timed_out=waited)
 
 
 def post(*, url: str, headers: dict[str, str], body: bytes, timeout: float) -> Reply:
@@ -242,6 +363,29 @@ def post(*, url: str, headers: dict[str, str], body: bytes, timeout: float) -> R
         return Reply(exc.code, exc.read() or b"")
     except (OSError, ValueError) as exc:
         return Reply(0, str(exc).encode("utf-8", "replace"))
+
+
+def _body(
+    model: str, system: str, user: str, max_tokens: int, effort_now: str | None
+) -> bytes:
+    """One request, as bytes. Built here so it can be built twice.
+
+    The second time is without `reasoning_effort`, for an endpoint that does not
+    know the field -- see the refusal branch in `ask`.
+    """
+    asked: dict = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        "temperature": 0,
+        "max_tokens": max_tokens,
+        "stream": False,
+    }
+    if effort_now:
+        asked["reasoning_effort"] = effort_now
+    return json.dumps(asked, ensure_ascii=False).encode("utf-8")
 
 
 def _said(body: bytes) -> str | None:

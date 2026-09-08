@@ -44,9 +44,13 @@ class _Fake:
         self.replies = list(replies)
         self.asked: list[dict] = []
         self.slept: list[float] = []
+        # What each ask was given to wait. The two passes differ in nothing else,
+        # so this is how a test tells them apart.
+        self.waited: list[float] = []
 
     def __call__(self, *, url: str, headers: dict, body: bytes, timeout: float) -> Reply:
         self.asked.append(json.loads(body))
+        self.waited.append(timeout)
         assert self.replies, "transport asked more often than it was prepared for"
         reply = self.replies.pop(0)
         if isinstance(reply, Exception):
@@ -85,30 +89,44 @@ def _size_word(model: str) -> str:
     return model
 
 
-def test_the_ladder_runs_from_the_largest_model_down():
-    """Order is the design here, and it cannot be checked against itself.
+def test_the_ladder_is_ordered_by_what_answers_and_not_by_size():
+    """The rule Faz 26 replaced, and why it was replaced.
 
-    Asking whether the first rung equals `DEFAULT_LADDER[0]` asks the code
-    whether it agrees with itself: reorder the list and the expectation
-    reorders with it. The intent has to be written out instead -- largest
-    first, and every step down the ladder a step down in size.
+    The ladder used to run largest first, and that reads like the obvious
+    design: ask the best judgement, fall to a smaller one when it is busy.
+    Measured on 2026-09-08 against the free tier, the flagship holds a request
+    in a queue for 107-124 seconds before it answers or refuses -- on two
+    independent providers, so the wait belongs to the model rather than to one
+    endpoint's mood. `super` answers the same question in about six seconds.
+
+    Keeping the flagship first cost 181.5 seconds of every distillation and
+    bought nothing: two timeouts, then the fall to the rung that was going to
+    answer anyway. So the order is a measurement now, and the intent is written
+    out here rather than checked against the list -- largest is no longer the
+    rule, *answers* is.
     """
-    assert [_size_word(name) for name in m.DEFAULT_LADDER] == [
-        "ultra",
-        "super",
-        "lightning",
-    ]
-    assert m.DEFAULT_LADDER[0] == FLAGSHIP
+    assert FLAGSHIP not in m.DEFAULT_LADDER, "the flagship queues; it is not a rung"
+    assert [_size_word(name) for name in m.DEFAULT_LADDER] == ["super", "lightning"]
 
 
-def test_the_largest_model_is_asked_first():
-    """The ladder is ordered by judgement, and the best judgement is asked for first."""
+def test_the_flagship_can_still_be_asked_for_by_name():
+    """Left out is not shut out. Somebody who will wait two minutes for it says
+    so, and nothing here argues."""
+    fake = _Fake(_ok())
+    bridge = _bridge(fake, ladder=(FLAGSHIP,))
+    answer = bridge.ask("sistem", "kullanici")
+    assert answer is not None
+    assert answer.model == FLAGSHIP
+
+
+def test_the_first_rung_is_asked_first():
+    """Whatever the ladder is, the walk starts at the top of it."""
     fake = _Fake(_ok())
     answer = _bridge(fake).ask("sistem", "kullanici")
     assert answer is not None
-    assert answer.model == FLAGSHIP
+    assert answer.model == m.DEFAULT_LADDER[0]
     assert answer.tries == 1
-    assert fake.models == [FLAGSHIP]
+    assert fake.models == [m.DEFAULT_LADDER[0]]
 
 
 def test_a_busy_rung_is_tried_again_before_it_is_left_behind():
@@ -129,6 +147,153 @@ def test_a_rung_that_stays_busy_hands_the_question_down():
     assert fake.models == [m.DEFAULT_LADDER[0], m.DEFAULT_LADDER[0], m.DEFAULT_LADDER[1]]
 
 
+def test_a_rung_that_ran_out_of_time_is_not_asked_again():
+    """The other half of Faz 26, and the more expensive half.
+
+    A busy rung refuses in a moment, so asking again is cheap and often works.
+    A rung that ran out of time did not refuse -- it is queued, and the queue is
+    longer than the wait. Asking the same rung again joins the same queue again:
+    a second full timeout to be told the same thing. Measured, that was 181.5
+    seconds of every distillation.
+
+    So the two are told apart here, and only the cheap one is repeated.
+    """
+    fake = _Fake(TimeoutError("the read operation timed out"), _ok())
+    answer = _bridge(fake).ask("sistem", "kullanici")
+
+    assert answer is not None
+    assert answer.model == m.DEFAULT_LADDER[1], "beklemek bir kez odenir, iki kez degil"
+    assert fake.models == [m.DEFAULT_LADDER[0], m.DEFAULT_LADDER[1]]
+    assert fake.slept == [], "zaman asiminin ustune bir de beklenmez"
+
+
+def test_a_refusal_that_arrives_quickly_is_still_worth_repeating():
+    """Faz 26 narrows the retry; it does not remove it."""
+    fake = _Fake(Reply(503, b""), _ok())
+    answer = _bridge(fake).ask("sistem", "kullanici")
+
+    assert answer is not None
+    assert answer.model == m.DEFAULT_LADDER[0]
+    assert fake.slept == [pytest.approx(1.5)]
+
+
+def test_nothing_is_said_about_effort_unless_somebody_asks(monkeypatch):
+    monkeypatch.delenv("SIFT_EFFORT", raising=False)
+    fake = _Fake(_ok())
+    _bridge(fake).ask("sistem", "kullanici")
+
+    assert "reasoning_effort" not in fake.asked[0]
+
+
+def test_the_effort_somebody_asked_for_is_what_is_sent(monkeypatch):
+    """Measured: this model wrote 924 tokens of reasoning to produce a
+    twelve-token answer, and the caller waited 15.3 seconds for it. At `low` the
+    same question took 2.4 seconds -- and lost 7.8% of the lines a reader could
+    not do without, which is why it is a setting and not the default."""
+    monkeypatch.setenv("SIFT_EFFORT", "low")
+    fake = _Fake(_ok())
+    _bridge(fake).ask("sistem", "kullanici")
+
+    assert fake.asked[0]["reasoning_effort"] == "low"
+
+
+def test_an_endpoint_that_will_not_take_the_effort_field_is_asked_without_it(
+    monkeypatch,
+):
+    """The field is this tool's idea, not the caller's question.
+
+    Not every endpoint speaking this shape knows `reasoning_effort`, and one
+    that rejects it must cost a repeat rather than an answer -- a speed setting
+    that turns into silence is worse than no setting.
+    """
+    monkeypatch.setenv("SIFT_EFFORT", "low")
+    fake = _Fake(Reply(400, b"unknown field: reasoning_effort"), _ok())
+
+    answer = _bridge(fake).ask("sistem", "kullanici")
+
+    assert answer is not None
+    assert answer.model == m.DEFAULT_LADDER[0], "ayni basamak, sadece alansiz"
+    assert "reasoning_effort" in fake.asked[0]
+    assert "reasoning_effort" not in fake.asked[1]
+
+
+def test_it_is_dropped_once_and_not_argued_about(monkeypatch):
+    """Refused again without the field means the field was never the problem."""
+    monkeypatch.setenv("SIFT_EFFORT", "low")
+    fake = _Fake(Reply(400, b""), Reply(400, b""), _ok())
+
+    answer = _bridge(fake).ask("sistem", "kullanici")
+
+    assert answer is not None
+    assert answer.model == m.DEFAULT_LADDER[1], "ikinci retten sonra alt basamak"
+
+
+def test_a_ladder_that_ran_out_of_time_is_walked_again_more_slowly():
+    """The second option, and the reason the first one is allowed to be brief.
+
+    "Nobody answered in twenty-five seconds" is not "nobody was going to".
+    Measured, a queued rung clears at 107-124 seconds. So the quick pass is
+    tried on every rung first, and only when all of them ran out of time is the
+    same ladder walked again with patience -- which costs nothing on a day when
+    the quick pass answers, because then it never happens.
+    """
+    fake = _Fake(
+        TimeoutError("timed out"),  # quick pass, first rung
+        TimeoutError("timed out"),  # quick pass, second rung
+        _ok(),  # patient pass, first rung
+    )
+    bridge = _bridge(fake, timeout=25.0, patience=150.0)
+
+    answer = bridge.ask("sistem", "kullanici")
+
+    assert answer is not None
+    assert answer.model == m.DEFAULT_LADDER[0]
+    assert fake.waited == [25.0, 25.0, 150.0], "once cabuk, sonra sabirli"
+
+
+def test_patience_is_spent_on_a_queue_and_on_nothing_else():
+    """A refusal is not a queue. Waiting longer cannot turn a 404 into a model."""
+    fake = _Fake(*[Reply(404, b"no such model") for _ in range(len(m.DEFAULT_LADDER))])
+    bridge = _bridge(fake, timeout=25.0, patience=150.0)
+
+    assert bridge.ask("sistem", "kullanici") is None
+    assert 150.0 not in fake.waited, "reddedilen bir istek icin beklenmez"
+
+
+def test_a_dead_key_is_not_offered_to_every_rung_twice():
+    """The one refusal that ends the walk should not begin a second one."""
+    fake = _Fake(Reply(401, b"unauthorized"))
+    bridge = _bridge(fake, timeout=25.0, patience=150.0)
+
+    assert bridge.ask("sistem", "kullanici") is None
+    assert len(fake.asked) == 1
+
+
+def test_patience_can_be_switched_off(monkeypatch):
+    """For a caller who would rather have a quick no than a slow yes."""
+    monkeypatch.setenv("SIFT_PATIENCE", "0")
+    fake = _Fake(*[TimeoutError("timed out") for _ in range(len(m.DEFAULT_LADDER))])
+    bridge = _bridge(fake)
+
+    assert bridge.ask("sistem", "kullanici") is None
+    assert set(fake.waited) == {bridge.timeout}, "tek tur, tek zaman asimi"
+
+
+def test_what_went_wrong_in_both_passes_is_said():
+    """A view built without a model says why. With two passes there are two
+    reasons, and the second one alone would read as though the first never
+    happened."""
+    fake = _Fake(
+        *[TimeoutError("timed out") for _ in range(len(m.DEFAULT_LADDER))],
+        *[Reply(503, b"") for _ in range(len(m.DEFAULT_LADDER) * m._TRIES_PER_RUNG)],
+    )
+    bridge = _bridge(fake, timeout=25.0, patience=150.0)
+
+    assert bridge.ask("sistem", "kullanici") is None
+    assert "no answer in 25s" in (bridge.last_error or "")
+    assert "then 150s" in (bridge.last_error or "")
+
+
 def test_a_rejected_key_ends_the_walk_at_once():
     """A smaller model will refuse the same key just as firmly.
 
@@ -144,10 +309,11 @@ def test_a_rejected_key_ends_the_walk_at_once():
 
 
 def test_every_rung_busy_is_an_empty_answer_rather_than_an_error():
-    fake = _Fake(*[Reply(503, b"") for _ in range(6)])
+    kere = len(m.DEFAULT_LADDER) * m._TRIES_PER_RUNG
+    fake = _Fake(*[Reply(503, b"") for _ in range(kere)])
     bridge = _bridge(fake)
     assert bridge.ask("sistem", "kullanici") is None
-    assert len(fake.asked) == 6, "her basamak ikiser kez denenmeli"
+    assert len(fake.asked) == kere, "her basamak ikiser kez denenmeli"
     assert "503" in (bridge.last_error or "")
 
 
@@ -242,7 +408,7 @@ def test_the_ladder_can_be_replaced_from_the_environment(monkeypatch):
 
 def test_an_unreadable_timeout_falls_back_instead_of_failing(monkeypatch):
     monkeypatch.setenv("SIFT_TIMEOUT", "cok uzun")
-    assert Bridge(api_key="x").timeout == 90.0
+    assert Bridge(api_key="x").timeout == m._DEFAULT_TIMEOUT
 
 
 @pytest.mark.skipif(

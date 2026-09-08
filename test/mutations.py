@@ -809,6 +809,59 @@ MUTATIONS = [
         "        if not sys.stdin.isatty():",
         "        if False:",
     ),
+    # -- Faz 25: what a clean machine meets ----------------------------------
+    Mutation(
+        "server.py",
+        "a missing extra is answered with the command that fixes it",
+        '        \'    pip install "sift-mcp[mcp]"\\n\'',
+        '        "\\n"',
+    ),
+    Mutation(
+        "cli.py",
+        "the offer waits until there is not a key to fetch first",
+        "    if sending_on() and find_key() is None:\n        return",
+        "    if False:\n        return",
+    ),
+    # -- Faz 26: waiting on a rung that is not going to answer ---------------
+    Mutation(
+        "model.py",
+        "a rung that ran out of time is not asked again",
+        "                    if reply.timed_out:",
+        "                    if False:",
+    ),
+    Mutation(
+        "model.py",
+        "the flagship is not on the ladder, because it queues",
+        '    "nvidia/nemotron-3-super-120b-a12b",\n'
+        '    "nvidia/nemotron-3.5-lightning-30b-a3b",\n',
+        '    "nvidia/nemotron-3-ultra-550b-a55b",\n'
+        '    "nvidia/nemotron-3-super-120b-a12b",\n'
+        '    "nvidia/nemotron-3.5-lightning-30b-a3b",\n',
+    ),
+    Mutation(
+        "model.py",
+        "an endpoint that will not take the effort field is asked without it",
+        "                if wanted:",
+        "                if False:",
+    ),
+    Mutation(
+        "model.py",
+        "the effort setting reaches the request",
+        "    return written or None",
+        "    return None",
+    ),
+    Mutation(
+        "model.py",
+        "a ladder that ran out of time is walked again with patience",
+        "        if answer is not None or not queued:",
+        "        if True:",
+    ),
+    Mutation(
+        "model.py",
+        "patience is spent on a queue and on nothing else",
+        "                        queued = True",
+        "                        pass",
+    ),
     # -- Faz 9: a command left running ---------------------------------------
     Mutation(
         "background.py",

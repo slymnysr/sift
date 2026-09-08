@@ -173,6 +173,28 @@ def test_nothing_is_mentioned_once_it_is_on(capsys):
     assert "sift hook --install" not in capsys.readouterr().err
 
 
+def test_nothing_is_mentioned_while_there_is_a_key_to_fetch(capsys, monkeypatch):
+    """Found by installing the package into a clean machine and running it.
+
+    A first run with no key already fills the screen with a banner saying to go
+    and get one. Spending the single mention this ever makes on that same screen
+    spends it on somebody who has not seen the tool work yet, and it is a mention
+    about making it work *better*. It waits.
+    """
+    monkeypatch.delenv("SIFT_NO_MODEL", raising=False)
+
+    cli.main(["run", "--", "echo", "one"])
+    first = capsys.readouterr().err
+
+    assert "no API key" in first, "this test is about the keyless screen"
+    assert "sift hook --install" not in first
+
+    monkeypatch.setenv("SIFT_NO_MODEL", "1")
+    cli.main(["run", "--", "echo", "two"])
+
+    assert "sift hook --install" in capsys.readouterr().err, "and then it is said"
+
+
 def test_nothing_is_mentioned_to_somebody_who_switched_it_off(capsys, monkeypatch):
     monkeypatch.setenv("SIFT_HOOK", "0")
 

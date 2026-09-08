@@ -786,6 +786,12 @@ def _mention_hook() -> None:
     """Tell the reader, one time, that the client's own shell can come here too."""
     if hook_module.installed() or not hook_module.wanted():
         return
+    # Not while there is a more important thing to do. Somebody on their first
+    # run without a key is already being told to go and get one; spending the
+    # single mention this ever makes on the same screen would waste it on
+    # somebody who has not seen the tool work yet.
+    if sending_on() and find_key() is None:
+        return
     marker = store.home() / TOLD
     if marker.exists():
         return
