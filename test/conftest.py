@@ -71,6 +71,21 @@ def _own_store(tmp_path, monkeypatch):
     # a feature with its own tests rather than a condition every other test is
     # silently run under.
     monkeypatch.setenv("SIFT_CACHE", "0")
+    # And no test reaches the network, whatever this machine happens to have.
+    #
+    # `find_key` looks in the environment and then in `~/.config/nvidia/api_key`,
+    # so deleting the variables is not enough on a machine where somebody has
+    # actually set the tool up -- which is every machine it is developed on.
+    # Measured: with the key file reachable, the suite went from 42s to 115s and
+    # the extra 73 seconds were real requests to a real endpoint, paid for out
+    # of the developer's own quota, from tests that are about garbage collection
+    # and byte counting.
+    #
+    # Same shape as the store leak above and the same fix: not "remember to set
+    # HOME in the next test file", but "a test cannot reach it".
+    monkeypatch.setenv("HOME", str(tmp_path))
+    for name in ("SIFT_API_KEY", "NVIDIA_API_KEY"):
+        monkeypatch.delenv(name, raising=False)
 
 
 def pytest_configure(config: object) -> None:
