@@ -33,6 +33,7 @@ from sift.background import launch, seen, unread, wait_for
 from sift.background import stop as stop_run
 from sift.capture import run as run_command
 from sift.distill import BUDGET
+from sift.model import find_key, sending_on
 from sift.peek import peek as peek_at
 from sift.tools import BY_NAME, KNOWN, command_for
 from sift.view import (
@@ -47,6 +48,55 @@ from sift.view import (
     peek_footer,
     state,
 )
+
+# What a tool answers with when nobody has finished setting this up.
+#
+# The third rule says nothing here may break the caller's command, and that is
+# why this is a sentence rather than an error, and why it says plainly that the
+# command was not run. The caller has a shell of its own; the worst outcome is
+# not "sift declined", it is "sift declined and the caller did not notice".
+#
+# Declining is not the same as failing open here, and the difference is which
+# caller is reading. A person at a terminal can see a view built out of the ends
+# of a file and judge it for what it is. A model cannot: it is handed a short
+# text with a footer it has no reason to distrust, and a quietly worse answer is
+# the one thing this project will not hand a reader who cannot check it.
+NO_KEY = """\
+sift is not set up on this machine, so it did nothing and ran nothing.
+
+Run the command with your own shell tool instead. Nothing is in the way.
+
+sift asks a free NVIDIA model which lines of an output matter. That needs a key,
+and it has to be yours -- one is not shipped and one cannot be shared. Put it in
+any of these and restart this server:
+
+    SIFT_API_KEY=...            (environment)
+    NVIDIA_API_KEY=...          (environment)
+    ~/.config/nvidia/api_key    (a file with the key in it)
+
+A key is free at https://build.nvidia.com
+
+If you meant to run without a model, set SIFT_NO_MODEL=1 and sift will work
+without asking anything -- deterministically, and less well.\
+"""
+
+
+def _unset() -> bool:
+    """Whether this is a sift nobody finished setting up.
+
+    Deliberately not the same question as "can a model be reached". Three states
+    are worth telling apart and only one of them is this:
+
+    * `SIFT_NO_MODEL=1` -- switched off on purpose. That is a decision, it is
+      respected, and warning about it would be nagging somebody about a thing
+      they typed.
+    * no key at all -- nobody finished installing this. Nothing works as
+      advertised and saying so is the only useful thing to do.
+    * a key that the endpoint would not take, or an endpoint that is down --
+      the third rule's territory, and it falls back to the ends of the output.
+    """
+    return sending_on() and find_key() is None
+
 
 INSTRUCTIONS = """\
 Use `run` in place of a plain shell tool whenever a command may print more than
@@ -146,6 +196,9 @@ def run(
             pattern, not a guess this tool made. Text that is not a valid
             expression is searched for literally.
     """
+    if _unset():
+        return NO_KEY
+
     if background:
         return _start(command, timeout, cwd)
     try:
@@ -217,6 +270,9 @@ def follow(
             answering that nothing has happened. A run that has already finished
             is never waited for.
     """
+    if _unset():
+        return NO_KEY
+
     if everything:
         return _every_run(wait)
 
@@ -267,6 +323,9 @@ def outline(path: str, budget: int | None = None, keep: str | None = None) -> st
             whatever else was chosen -- use it when you are looking for one
             declaration in a file too large to outline whole.
     """
+    if _unset():
+        return NO_KEY
+
     try:
         view, who = best_outline(path, budget, keep)
     except OSError as exc:  # the file cannot be read; there is no view to give
@@ -297,6 +356,9 @@ def digest(path: str, budget: int | None = None, keep: str | None = None) -> str
             whatever else was chosen -- use it when you already know the error
             code, the test name or the timestamp you are looking for.
     """
+    if _unset():
+        return NO_KEY
+
     try:
         view, who = best_digest(path, budget, keep)
     except OSError as exc:  # the file cannot be read; there is no view to give
@@ -328,6 +390,9 @@ def tool(name: str, args: list[str] | None = None) -> str:
         name: One of `sg`, `diff` or `loc`.
         args: What to pass it, as separate words.
     """
+    if _unset():
+        return NO_KEY
+
     line = command_for(name, list(args or []))
     if line is None:
         known = ", ".join(one.name for one in KNOWN)
@@ -367,6 +432,9 @@ def digest_many(paths: list[str], budget: int | None = None, keep: str | None = 
         budget: How many lines each view may cost.
         keep: A regular expression kept in every one of them.
     """
+    if _unset():
+        return NO_KEY
+
     if not paths:
         return "sift: digest_many needs at least one path"
     return "\n\n".join(

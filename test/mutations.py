@@ -765,6 +765,25 @@ MUTATIONS = [
         "        counted += 1 if saving.tokens else 0",
         "        counted += 1",
     ),
+    # -- Faz 24: a machine nobody finished setting up ------------------------
+    Mutation(
+        "server.py",
+        "a server with no key declines instead of answering worse",
+        "    return sending_on() and find_key() is None",
+        "    return False",
+    ),
+    Mutation(
+        "server.py",
+        "switching the model off on purpose is not the same as forgetting a key",
+        "    return sending_on() and find_key() is None",
+        "    return find_key() is None",
+    ),
+    Mutation(
+        "cli.py",
+        "a terminal with no key is told so, loudly",
+        "    if word in NEEDS_A_MODEL and sending_on() and find_key() is None:",
+        "    if False:",
+    ),
     # -- Faz 9: a command left running ---------------------------------------
     Mutation(
         "background.py",

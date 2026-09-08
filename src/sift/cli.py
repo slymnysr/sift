@@ -42,6 +42,7 @@ from sift.capture import Capture, run
 from sift.distill import BUDGET
 from sift.hook import answer as hook_answer
 from sift.memory import habits, reach
+from sift.model import find_key, sending_on
 from sift.peek import FOUND_CAP, peek
 from sift.tools import BY_NAME, KNOWN, command_for
 from sift.view import (
@@ -89,6 +90,48 @@ TIMED_OUT = 124
 CANNOT_RUN = 127
 
 
+# What a person is told when nobody has finished setting this up.
+#
+# Loud, because the failure it describes is a quiet one. Without a key the tool
+# still runs, still keeps every byte, still returns the exit code -- the third
+# rule holds -- and hands back the first ten lines and the last forty. That view
+# is honest and it is much worse, and it looks exactly like a good one: the same
+# shape, the same gap markers, the same confidence. Somebody who does not know
+# this happened will conclude the tool is not much use.
+#
+# On stderr, so that piping a view somewhere is unaffected by it.
+NO_KEY = """\
+┌──────────────────────────────────────────────────────────────────────┐
+│  sift has no API key, so no model chose these lines.                 │
+│  You are seeing the beginning and the end of the output, and that is │
+│  all this can do unaided. It works; it works much worse.             │
+│                                                                      │
+│  The key is yours to add, and free:                                  │
+│      export SIFT_API_KEY=...                                         │
+│      or put it in ~/.config/nvidia/api_key                           │
+│      get one at https://build.nvidia.com                             │
+│                                                                      │
+│  Meant to run without a model? SIFT_NO_MODEL=1 says so, and silences │
+│  this.                                                               │
+└──────────────────────────────────────────────────────────────────────┘"""
+
+# The commands that would have asked a model. The rest -- peek, list, stats,
+# memory, gc, tools -- answer out of what is already on disk, and warning about
+# a key they were never going to use is noise.
+NEEDS_A_MODEL = frozenset({"run", "follow", "outline", "digest", "tool", "hook"})
+
+
+def _warn_unset(word: str) -> None:
+    """Say it, once, before the view rather than after it.
+
+    `SIFT_NO_MODEL=1` silences this and that is the point of the switch: it is
+    the difference between somebody who decided and somebody who has not
+    finished. Nagging the first about the second is how a warning gets ignored.
+    """
+    if word in NEEDS_A_MODEL and sending_on() and find_key() is None:
+        print(NO_KEY, file=sys.stderr)
+
+
 def main(argv: list[str] | None = None) -> int:
     _speak_utf8()
     args = list(sys.argv[1:] if argv is None else argv)
@@ -96,6 +139,7 @@ def main(argv: list[str] | None = None) -> int:
         print(USAGE)
         return 0
     word, rest = args[0], args[1:]
+    _warn_unset(word)
     if word == "run":
         return _run(rest)
     if word == "follow":

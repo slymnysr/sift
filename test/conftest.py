@@ -86,6 +86,18 @@ def _own_store(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     for name in ("SIFT_API_KEY", "NVIDIA_API_KEY"):
         monkeypatch.delenv(name, raising=False)
+    # And it says so, rather than looking like a machine nobody set up.
+    #
+    # Those are two different states and the tool now treats them differently:
+    # switched off on purpose is a decision it respects, while no key at all is
+    # an installation nobody finished, which the server declines and the command
+    # line prints a banner about. The suite runs without a model deliberately,
+    # so it is the first of those, and saying so keeps the banner out of every
+    # captured stderr and the server's tools answering.
+    #
+    # `test_setup.py` and `test_model.py` take it back off: one to measure what
+    # an unset machine does, the other because it is about the asking itself.
+    monkeypatch.setenv("SIFT_NO_MODEL", "1")
 
 
 def pytest_configure(config: object) -> None:

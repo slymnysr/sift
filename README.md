@@ -202,8 +202,13 @@ transcript goes on staying out of it.
 
 ```bash
 pip install "sift-mcp[mcp]"
+export SIFT_API_KEY=nvapi-...     # yours; see Installing
 claude mcp add sift -- sift-mcp
 ```
+
+Without a key the server starts and every tool that would need a model declines
+with an explanation, so the agent falls back to its own shell rather than being
+handed a worse answer it cannot tell apart from a good one.
 
 Any client that speaks stdio will do — the command is `sift-mcp`. It offers
 `run`, `follow`, `outline`, `digest`, `digest_many`, `tool` and `peek`. `list`
@@ -222,8 +227,35 @@ pip install sift-mcp            # the command line, no dependencies at all
 pip install "sift-mcp[mcp]"     # and the MCP server
 ```
 
-Python 3.12 or newer. A key for the model goes in `SIFT_API_KEY`; without one
-everything still works, deterministically and less well, which is the third rule.
+Python 3.12 or newer, and no dependencies for the command line.
+
+### You need your own key
+
+**This is not optional and it is not shipped.** `sift` asks a free NVIDIA model
+which lines matter, and that key has to be yours — one cannot be bundled and one
+cannot be shared. It is free, and it takes a minute:
+
+1. Get a key at **<https://build.nvidia.com>**
+2. Put it anywhere `sift` looks:
+
+```bash
+export SIFT_API_KEY=nvapi-...            # or NVIDIA_API_KEY
+# or, once and for good:
+mkdir -p ~/.config/nvidia && echo 'nvapi-...' > ~/.config/nvidia/api_key
+```
+
+Without it the two callers are answered differently, on purpose:
+
+- **At a terminal** everything still runs — the command, the bytes, the exit
+  code, the third rule — and a loud banner says no model chose these lines and
+  that you are looking at the ends of the output.
+- **Over MCP** the tools decline and say why, and tell the agent to use its own
+  shell instead. A person can see a degraded view and judge it; a model is handed
+  a short text with a footer it has no reason to distrust, and quietly worse is
+  the one thing this will not do to a reader who cannot check.
+
+If you *want* to run without a model, say so with `SIFT_NO_MODEL=1`. That is a
+decision rather than an oversight, everything works, and nothing lectures you.
 
 ## How it was built
 

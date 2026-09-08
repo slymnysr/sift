@@ -30,9 +30,16 @@ Bunlar tasarımın omurgası. Hiçbir faz bunları esnetmez.
 2. **Hiçbir şey silinmez.** Ham yakalama diskte durur; `peek` onu byte-for-byte
    geri verir. Görünüm bir **özet** değil, bir **seçim**dir; atlanan yer
    "burada 240 satır vardı" diye işaretlenir.
-3. **Fail-open.** Anahtar yok, ağ yok, model 503, cevap saçma — hiçbiri aracı
-   durdurmaz. Determinist yedek devreye girer. Bağlamı korumak için isteği
-   düşüren bir araç, kazandırdığından çok kaybettirir.
+3. **Fail-open.** Ağ yok, model 503, cevap saçma — hiçbiri aracı durdurmaz.
+   Determinist yedek devreye girer. Bağlamı korumak için isteği düşüren bir
+   araç, kazandırdığından çok kaybettirir.
+
+   24. faz bunu bir yerde inceltti, esnetmeden: **kurulumu hiç bitmemiş makine**
+   (anahtar yok, kapatma anahtarı da yok) ayrı bir durumdur ve MCP'de reddedilir.
+   Sebep kuralın kendisi: terminaldeki insan zayıf görünümü görüp değerlendirir,
+   ajan göremez. Reddetmek de bozmak değil — araç bir cümle döndürür, komutu
+   çalıştırmadığını söyler, ajan kendi kabuğuyla devam eder. Komut satırında
+   kural olduğu gibi durur: komut çalışır, çıkış kodu döner, uyarı bağırır.
 
 ## Fazlar
 
@@ -65,6 +72,7 @@ sonraki faza geçilmez.
 | 21 | Saklama | yakalamalar sonsuza birikmesin; silinen kayıt sessiz kalmasın | bitti — [21-SAKLAMA.md](21-SAKLAMA.md) |
 | 22 | Yanıt önbelleği | aynı girdiye aynı görünüm, ikinci kez sorulmadan | bitti — [22-YANIT-ONBELLEGI.md](22-YANIT-ONBELLEGI.md) |
 | 23 | Ölçüm birimi | `stats` baytı değil, kurulan kişinin sorduğu şeyi saysın | bitti — [23-OLCUM-BIRIMI.md](23-OLCUM-BIRIMI.md) |
+| 24 | Anahtar | kurulumu bitmemiş makine sessiz kalmasın; ajana daha kötü cevap verilmesin | bitti — [24-ANAHTAR.md](24-ANAHTAR.md) |
 
 ## Ek fazlar — neden sonradan çıktılar
 

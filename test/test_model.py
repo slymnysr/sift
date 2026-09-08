@@ -27,6 +27,10 @@ def _no_real_key(tmp_path, monkeypatch):
     test that quietly picked up a working key would be testing the machine
     rather than the code.
     """
+    # This file is about the asking itself, so the switch that stops it comes
+    # back off -- `conftest.py` sets it for everything else, which runs without
+    # a model on purpose and should say so rather than look unconfigured.
+    monkeypatch.delenv("SIFT_NO_MODEL", raising=False)
     for name in (*m.KEY_VARIABLES, "SIFT_MODELS", "SIFT_BASE_URL", "SIFT_TIMEOUT"):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("HOME", str(tmp_path))
