@@ -227,14 +227,20 @@ everything still works, deterministically and less well, which is the third rule
 
 ## How it was built
 
-Eleven phases, each one closed before the next began, each with a note in
+Twenty-four phases, each one closed before the next began, each with a note in
 `notlar/` saying what was decided and what it cost. `notlar/00-PLAN.md` is the
-arc.
+arc, including the things that were deliberately not built and why.
 
 The tests are in `test/`. Beside them is `test/mutations.py`, which breaks each
-rule the code follows, one at a time, and checks that the suite notices — a
-green suite says the tests did not object to *this* version of the code, not
-that they would object to a worse one.
+rule the code follows — 162 of them, one at a time — and checks that the suite
+notices. A green suite says the tests did not object to *this* version of the
+code, not that they would object to a worse one.
+
+It also says what happens when that battery is interrupted, because it was: a
+break left on disk survived every ordinary test run and took the machine down
+six times before anybody looked. `test/conftest.py` repairs one now, and the
+rule it was breaking is kept twice over, so that no single edit anywhere can
+turn `sift stop` into a signal to everything you own. That is `notlar/19`.
 
 ## License
 
