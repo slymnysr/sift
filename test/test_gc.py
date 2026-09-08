@@ -176,7 +176,7 @@ def test_the_command_line_says_what_went_and_what_it_freed(capsys):
 def test_the_command_line_says_so_when_there_is_nothing_to_remove(capsys):
     _capture("too young")
     assert cli.main(["gc"]) == 0
-    assert "no capture is older" in capsys.readouterr().out
+    assert "nothing here is older" in capsys.readouterr().out
 
 
 def test_a_gc_that_was_asked_in_words_rather_than_days_is_refused(capsys):

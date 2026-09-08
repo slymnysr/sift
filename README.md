@@ -31,6 +31,17 @@ ERROR: //src/parser:parse_test failed in 4.1s
 FAILED: 1 of 214 targets
 ```
 
+A list is not read in lines. A JSON array written for a machine often has no
+newlines at all, and there is nothing in a line of one worth choosing, so the
+record becomes the unit and the same rules hold:
+
+```
+$ sift digest export.json
+{"id": 3, "status": "failed", "error": "connection refused"}
+─ 412 records not shown · sift peek export.json for the text they came from ─
+{"id": 416, "status": "ok"}
+```
+
 The same question, asked about source code instead, is a table of
 contents:
 
@@ -99,15 +110,22 @@ That costs you nothing to read. The model is only ever asked for line numbers,
 and the lines are printed from your own file, so **a line masked on the way out
 is still shown to you in full**.
 
-Two switches:
+Three switches:
 
 ```bash
 SIFT_NO_MODEL=1   # never send anything; use the deterministic view
 SIFT_MASK=0       # send unmasked
+SIFT_CACHE=0      # ask again, even about text already answered
 ```
 
 Masking is not complete and does not claim to be: a bare secret shaped like
 nothing in particular gets through. `SIFT_NO_MODEL` is the one that guarantees.
+
+The third is about not paying twice. An answer already given for exactly these
+bytes and exactly this question is used again instead of bought again — and what
+is kept is the numbers, never the view, so the text is still rendered from your
+own file and the gap still names your own capture. A view that cost no request
+says `(remembered)` where it would otherwise name the model.
 
 Captured bytes never leave `$SIFT_HOME` (`~/.cache/sift` by default). Nothing is
 uploaded, nothing is logged elsewhere, and removing a capture directory removes

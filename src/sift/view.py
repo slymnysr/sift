@@ -71,7 +71,7 @@ def _choose(
     try:
         chosen = distill(capture, bridge, budget, keep)
         if chosen is not None:
-            return chosen, chosen.model or "model"
+            return chosen, chose(chosen)
         reason = bridge.last_error or "no lines chosen"
     except Exception as exc:  # a bug here must not cost the caller their output
         reason = f"{type(exc).__name__}: {exc}"
@@ -105,7 +105,7 @@ def best_follow(handle: str, lines: list[str], first: int) -> tuple[View, str]:
     try:
         chosen = follow(lines, handle, first, bridge)
         if chosen is not None:
-            return chosen, chosen.model or "model"
+            return chosen, chose(chosen)
         if bridge.last_error is None:
             return _quiet(lines, handle, first), "model (nothing new worth showing)"
         reason = bridge.last_error
@@ -145,7 +145,7 @@ def best_outline(
     try:
         chosen = outline(path, bridge, budget, keep)
         if chosen is not None:
-            return chosen, chosen.model or "model"
+            return chosen, chose(chosen)
         reason = bridge.last_error or "no lines chosen"
     except OSError:
         raise
@@ -178,7 +178,7 @@ def best_digest(
     try:
         chosen = digest(path, bridge, budget, keep)
         if chosen is not None:
-            return chosen, chosen.model or "model"
+            return chosen, chose(chosen)
         reason = bridge.last_error or "no lines chosen"
     except OSError:
         raise
@@ -202,6 +202,7 @@ def best_digests(
     than taking the other three down with it. One unreadable path in a list of
     four is not a reason to answer nothing.
     """
+
     def one(path: str):
         def ask() -> tuple[str, View, str]:
             try:
@@ -257,6 +258,19 @@ def follow_footer(handle: str, view: View, who: str, first: int, state: str) -> 
 def outline_footer(path: str, view: View, who: str) -> str:
     """The same line for a file: how much of it is here, and who left the rest out."""
     return f"sift {path} · {counted(view)} · {who}" + silence(view)
+
+
+def chose(view: View) -> str:
+    """Which model's judgement this is, and whether it was reached just now.
+
+    A remembered answer is the same model's answer and the footer keeps saying
+    whose it is. What it must not do is imply the model was asked: a reader
+    watching a tool spend requests deserves to know which of these views cost
+    one. A view naming a model and costing no asks can only have come from the
+    cache, so nothing has to be carried alongside it to know.
+    """
+    name = view.model or "model"
+    return f"{name} (remembered)" if view.model and view.asks == 0 else name
 
 
 def counted(view: View) -> str:

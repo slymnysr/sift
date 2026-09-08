@@ -57,6 +57,20 @@ def _own_store(tmp_path, monkeypatch):
     for its own reasons still wins; it just no longer has to.
     """
     monkeypatch.setenv("SIFT_HOME", str(tmp_path / "sift"))
+    # And no test is answered out of the cache unless it says so.
+    #
+    # Almost everything here measures what happens when the question is asked:
+    # what was in the prompt, how many asks it took, what a fallback does when
+    # the model cannot be reached. A cache that quietly answers instead turns
+    # those into measurements of nothing, and it does it without failing --
+    # `test_the_name_of_a_file_plays_no_part_in_its_outline` outlines the same
+    # bytes under two names, and with the cache on the second one never reaches
+    # a model at all, so the thing it exists to compare does not happen.
+    #
+    # `test_answers.py` turns it back on, which is the right shape: the cache is
+    # a feature with its own tests rather than a condition every other test is
+    # silently run under.
+    monkeypatch.setenv("SIFT_CACHE", "0")
 
 
 def pytest_configure(config: object) -> None:

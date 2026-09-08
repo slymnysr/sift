@@ -28,8 +28,8 @@ from collections.abc import Iterable, Iterator
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
+from sift import answers, records
 from sift import lines as text_lines
-from sift import records
 from sift.capture import Capture
 from sift.model import Answer, Bridge
 from sift.privacy import mask
@@ -364,6 +364,11 @@ def select(
 
     always = _always(lines, keep, first) if keep else set()
 
+    named = answers.key("\n".join(lines), question, budget, first)
+    remembered = answers.load(named) if answers.wanted() else None
+    if remembered is not None:
+        return _seen(lines, remembered, always, handle, first, unit)
+
     judge = bridge if bridge is not None else Bridge()
     batches = _batches(list(enumerate(lines, first)))
     asked = prompt(question, budget, len(batches))
@@ -387,10 +392,14 @@ def select(
         chosen, spent = narrow(lines, chosen, question, budget, judge, first)
         asks += spent
 
-    # After the ceiling, not inside it. A budget is this tool's opinion about
-    # what a view should cost; `keep` is an instruction, and an instruction that
-    # a default silently overrode would be worse than no instruction at all.
-    chosen |= always
+    # Written after narrowing and before `keep`, so what is remembered is the
+    # model's judgement under this ceiling and nothing the caller added to it.
+    # `keep` is applied again on the way out of a hit, because it is an
+    # instruction rather than an answer and belongs to the call, not the cache.
+    if answers.wanted():
+        answers.save(named, chosen, model, unanswered)
+
+    chosen = chosen | always
 
     return View(
         handle=handle,
@@ -400,6 +409,34 @@ def select(
         model=model,
         asks=asks,
         unanswered=unanswered,
+        unit=unit,
+    )
+
+
+def _seen(
+    lines: list[str],
+    remembered: answers.Answered,
+    always: set[int],
+    handle: str,
+    first: int,
+    unit: str,
+) -> View:
+    """A view built from an answer already given, rendered against this text.
+
+    `asks` is zero and that is the whole of what was saved. It is also how a
+    reader is told: a view naming a model and costing no questions is one that
+    was remembered, and the footer says so rather than implying a model was
+    reached just now.
+    """
+    chosen = remembered.chosen | always
+    return View(
+        handle=handle,
+        text=render(lines, chosen, handle, first, unit),
+        kept=len(chosen),
+        total=len(lines),
+        model=remembered.model,
+        asks=0,
+        unanswered=remembered.unanswered,
         unit=unit,
     )
 

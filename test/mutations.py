@@ -709,6 +709,37 @@ MUTATIONS = [
         "        if removed is not None:",
         "        if False:",
     ),
+    # -- Faz 22: the same question, asked twice ------------------------------
+    Mutation(
+        "distill.py",
+        "an answer already given is not bought a second time",
+        "    if remembered is not None:",
+        "    if False:",
+    ),
+    Mutation(
+        "answers.py",
+        "the question is part of what an answer is an answer to",
+        '    seed = "\\x00".join([text, question, repr(budget), repr(first)])',
+        '    seed = "\\x00".join([text, repr(budget), repr(first)])',
+    ),
+    Mutation(
+        "answers.py",
+        "the ceiling is part of what an answer is an answer to",
+        '    seed = "\\x00".join([text, question, repr(budget), repr(first)])',
+        '    seed = "\\x00".join([text, question, repr(first)])',
+    ),
+    Mutation(
+        "answers.py",
+        "an answer is old when nothing wants it, not when it was written",
+        "        os.utime(where(named))",
+        "        pass",
+    ),
+    Mutation(
+        "view.py",
+        "a view that cost no question says it was remembered",
+        '    return f"{name} (remembered)" if view.model and view.asks == 0 else name',
+        "    return name",
+    ),
     # -- Faz 9: a command left running ---------------------------------------
     Mutation(
         "background.py",

@@ -36,7 +36,7 @@ import os
 import sys
 import time
 
-from sift import store
+from sift import answers, store
 from sift.background import alive, launch, seen, stop, unread, wait_for
 from sift.capture import Capture, run
 from sift.distill import BUDGET
@@ -650,8 +650,9 @@ def _gc(args: list[str]) -> int:
     age = float(days) if days is not None else store.keep_days()
 
     swept = store.sweep(age * 86_400.0)
-    if not swept:
-        print(f"sift: no capture is older than {age:g} days.")
+    forgotten, freed_answers = answers.forget(age * 86_400.0)
+    if not swept and not forgotten:
+        print(f"sift: nothing here is older than {age:g} days.")
         return 0
 
     freed = 0
@@ -661,6 +662,9 @@ def _gc(args: list[str]) -> int:
         print(f"{one.handle:8}  {one.byte_count:>12,} B  {said}")
     word = "capture" if len(swept) == 1 else "captures"
     print(f"\n{len(swept)} {word} removed, {freed:,} B freed.")
+    if forgotten:
+        remembered = "answer" if forgotten == 1 else "answers"
+        print(f"{forgotten} remembered {remembered} dropped, {freed_answers:,} B.")
     return 0
 
 
