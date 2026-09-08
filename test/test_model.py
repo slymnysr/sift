@@ -33,7 +33,13 @@ def _no_real_key(tmp_path, monkeypatch):
     monkeypatch.delenv("SIFT_NO_MODEL", raising=False)
     for name in (*m.KEY_VARIABLES, "SIFT_MODELS", "SIFT_BASE_URL", "SIFT_TIMEOUT"):
         monkeypatch.delenv(name, raising=False)
+    # `HOME` alone moves `~` on Linux and macOS and not on Windows, where
+    # `Path.home()` reads `USERPROFILE`. A file-backed key test that set only
+    # `HOME` wrote its key somewhere `find_key` was never going to look.
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    monkeypatch.delenv("HOMEDRIVE", raising=False)
+    monkeypatch.delenv("HOMEPATH", raising=False)
     return tmp_path
 
 

@@ -19,6 +19,10 @@ from sift.peek import peek
 NOT_LINE_ENDINGS = ("\x0b", "\x0c", "\x1c", "\x1d", "\x1e", "\x85", "\u2028", "\u2029")
 
 
+# A progress bar that redraws itself, written as the exact bytes it writes.
+BAR = b"[1/3]\r[2/3]\r[3/3]\n"
+
+
 def test_a_line_ends_at_a_newline_and_at_nothing_else():
     """Form feed, vertical tab, the separators, NEL, and the Unicode ones.
 
@@ -70,7 +74,11 @@ def test_a_capture_keeps_the_carriage_returns_the_command_wrote():
     answer to.
     """
     capture = run(
-        [sys.executable, "-c", r"import sys; sys.stdout.write('[1/3]\r[2/3]\r[3/3]\n')"]
+        [
+            sys.executable,
+            "-c",
+            f"import sys; sys.stdout.buffer.write({BAR!r})",
+        ]
     )
     said = capture.text()
     assert said.count("\r") == 2
@@ -92,8 +100,17 @@ def test_peek_and_the_prompt_agree_on_which_line_is_line_three():
     show a different one -- which is the one thing this tool promises cannot
     happen.
     """
+    # Written as bytes, and by this interpreter rather than by whatever `python3`
+    # happens to mean here: the NEL below is exactly the character a console code
+    # page cannot spell, which is the whole reason the sample has one.
     said = "bir\niki\x85uc\ndort\n"
-    capture = run(["python3", "-c", f"print({said!r}, end='')"])
+    capture = run(
+        [
+            sys.executable,
+            "-c",
+            f"import sys; sys.stdout.buffer.write({said.encode() !r})",
+        ]
+    )
     body = lines.of(capture.text())
     # Read back with the same rule it was written with: str.splitlines() would
     # split the prompt on the NEL inside line two and answer with the wrong line.

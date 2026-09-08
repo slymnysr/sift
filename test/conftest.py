@@ -39,6 +39,25 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from mutations import MUTATING, undo_leftover
 
 
+def _move_home(monkeypatch, where) -> None:
+    """Move `~` for this test, on every platform that has a different name for it.
+
+    `HOME` alone is enough on Linux and macOS and does nothing on Windows, where
+    `Path.home()` reads `USERPROFILE` (then `HOMEDRIVE` + `HOMEPATH`). A test
+    that set only `HOME` was therefore isolated on two platforms out of three --
+    and the third is the one where it would quietly read the developer's real
+    `~/.config/nvidia/api_key`.
+
+    Measured on windows-latest: the test that proves a key is read from the file
+    could not find the file it had just written, because it wrote it under a
+    `~` the code was not looking at.
+    """
+    monkeypatch.setenv("HOME", str(where))
+    monkeypatch.setenv("USERPROFILE", str(where))
+    monkeypatch.delenv("HOMEDRIVE", raising=False)
+    monkeypatch.delenv("HOMEPATH", raising=False)
+
+
 @pytest.fixture(autouse=True)
 def _own_store(tmp_path, monkeypatch):
     """No test writes into the store somebody actually uses.
@@ -83,7 +102,7 @@ def _own_store(tmp_path, monkeypatch):
     #
     # Same shape as the store leak above and the same fix: not "remember to set
     # HOME in the next test file", but "a test cannot reach it".
-    monkeypatch.setenv("HOME", str(tmp_path))
+    _move_home(monkeypatch, tmp_path)
     for name in ("SIFT_API_KEY", "NVIDIA_API_KEY"):
         monkeypatch.delenv(name, raising=False)
     # And it says so, rather than looking like a machine nobody set up.

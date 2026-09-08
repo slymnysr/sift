@@ -26,6 +26,22 @@ def _isolated_home(tmp_path, monkeypatch):
 
 def _python(code: str) -> list[str]:
     return [sys.executable, "-c", code]
+def _writes(payload: bytes) -> list[str]:
+    """A command that writes exactly these bytes and nothing else.
+
+    `print` goes through Python's text layer, and on Windows that layer has two
+    opinions of its own: it rewrites every newline as CRLF, and it encodes with
+    the console's code page, which cannot spell most of the alphabets this
+    project is pointed at. A test that asserts bytes and spawns `print` is
+    asserting the platform's opinion rather than the tool's -- measured, that is
+    six failures on windows-latest and none anywhere else.
+
+    Writing to `stdout.buffer` says exactly what leaves the process, everywhere.
+    The code goes over as ASCII, because `repr` of a bytes object escapes the
+    rest, so the command line cannot mangle it either.
+    """
+    return [sys.executable, "-c", f"import sys; sys.stdout.buffer.write({payload!r})"]
+
 
 
 def test_what_the_command_wrote_comes_back_byte_for_byte():
@@ -112,7 +128,7 @@ def test_peek_clamps_a_range_instead_of_refusing_it():
 
 
 def test_a_capture_can_be_found_again_after_the_process_that_made_it_is_gone():
-    cap = run(_python("print('kalici')"))
+    cap = run(_writes(b"kalici\n"))
     again = store.load(cap.handle)
     assert again is not None
     assert again.command == cap.meta.command
@@ -157,7 +173,7 @@ def test_a_run_is_marked_complete_only_once_it_has_finished():
     """`meta.json` is the marker. Bytes without it are an interrupted run, and
     the bytes are still handed back -- it is the claims about them that are not
     invented."""
-    cap = run(_python("print('bitti')"))
+    cap = run(_writes(b"bitti\n"))
     assert store.meta_path(cap.handle).is_file()
     store.meta_path(cap.handle).unlink()
     assert store.load(cap.handle) is None

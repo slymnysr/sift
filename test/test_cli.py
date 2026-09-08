@@ -145,7 +145,13 @@ def test_output_in_any_script_comes_back_unchanged(capsys):
     which alphabets are printable.
     """
     said = "hata: dosya bulunamadi \u00b7 \u30a8\u30e9\u30fc \u00b7 \u062e\u0637\u0623"
-    cli.main(_run(f"print({said!r})"))
+    # Written as bytes rather than printed. `print` would hand these characters
+    # to the console's code page, and on Windows cp1252 cannot spell any of
+    # them -- the command would die with a UnicodeEncodeError and the test would
+    # be measuring the platform instead of the capture.
+    payload = (said + "\n").encode("utf-8")
+    wrote = f"import sys; sys.stdout.buffer.write({payload!r})"
+    cli.main(_run(wrote))
     assert capsys.readouterr().out.strip() == said
 
 

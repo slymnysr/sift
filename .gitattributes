@@ -1,0 +1,21 @@
+# The corpus is data, not source, and its bytes are the measurement.
+#
+# Git's newline conversion is helpful for code and destructive here. Checked out
+# on Windows with the default `core.autocrlf`, every `\n` in a sample becomes
+# `\r\n` -- and these samples exist precisely to hold line endings nobody else
+# counts the same way: a NEL from an EBCDIC conversion, a form feed, a progress
+# bar that redraws with carriage returns. Convert them and the corpus stops
+# being a record of what tools actually print and becomes a record of what git
+# thought it should print.
+#
+# Measured: on windows-latest the `cargo-de` sample arrived with CRLF and the
+# test that proves `str.splitlines()` would miscount it found nothing to prove.
+test/korpus/** -text
+test/korpus-kaynak/** -text
+
+# Source keeps LF in the repository whatever the checkout does, so a diff never
+# turns into every line at once.
+*.py text eol=lf
+*.md text eol=lf
+*.toml text eol=lf
+*.yml text eol=lf
