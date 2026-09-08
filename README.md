@@ -171,6 +171,18 @@ how much a command prints is not knowable before it runs. Routing everything
 costs nothing: a view of twelve lines is twelve lines. It fails open, so a bug
 in it leaves your shell exactly as it was, and `SIFT_HOOK=0` switches it off.
 
+It is the part of this that pays most and the only part you have to turn on, so
+it offers itself rather than waiting to be found:
+
+```bash
+sift hook --install      # says what it gives and what it costs, then asks
+sift hook --uninstall    # and takes it back out
+```
+
+It writes one line into your client's settings, keeps a copy of the file as it
+was, and touches nothing else that is in there. `sift run` mentions it once,
+ever, and then stops.
+
 `sift tool` runs one of three programs that answer a question *without opening
 the file* — `sg` (ast-grep) for structural search, `diff` (difftastic) for a diff
 that can tell a reindent from a change, `loc` (scc) for the size of a tree. Their

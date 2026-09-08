@@ -784,6 +784,31 @@ MUTATIONS = [
         "    if word in NEEDS_A_MODEL and sending_on() and find_key() is None:",
         "    if False:",
     ),
+    # -- Faz 25: offering it, and writing into somebody else's file ----------
+    Mutation(
+        "hook.py",
+        "installing adds to what is there rather than replacing it",
+        '                mine.append({"type": "command", "command": COMMAND})',
+        '                entry["hooks"] = [{"type": "command", "command": COMMAND}]',
+    ),
+    Mutation(
+        "hook.py",
+        "a settings shape this does not recognise is refused, not reshaped",
+        "    return found if isinstance(found, list) else None",
+        "    return found",
+    ),
+    Mutation(
+        "cli.py",
+        "the offer is made once and then never again",
+        "    if marker.exists():\n        return",
+        "    if False:\n        return",
+    ),
+    Mutation(
+        "cli.py",
+        "nobody is installed over without being asked",
+        "        if not sys.stdin.isatty():",
+        "        if False:",
+    ),
     # -- Faz 9: a command left running ---------------------------------------
     Mutation(
         "background.py",

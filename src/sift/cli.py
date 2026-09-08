@@ -37,6 +37,7 @@ import sys
 import time
 
 from sift import answers, store
+from sift import hook as hook_module
 from sift.background import alive, launch, seen, stop, unread, wait_for
 from sift.capture import Capture, run
 from sift.distill import BUDGET
@@ -70,6 +71,8 @@ USAGE = """sift -- run a command, keep every byte, show the lines that matter
   sift peek HANDLE|PATH [FIRST] [LAST] [--grep PATTERN] [--around N] [--max N]
   sift list [COUNT]
   sift hook                           answer one shell-command event on stdin
+  sift hook --install [--yes]         route the client's own shell here too
+  sift hook --uninstall               and take it back out
   sift tools                          which dense tools this machine has
   sift tool NAME [ARGS...]            run one of them, distilled
   sift memory [TERM] [--here]
@@ -141,7 +144,9 @@ def main(argv: list[str] | None = None) -> int:
     word, rest = args[0], args[1:]
     _warn_unset(word)
     if word == "run":
-        return _run(rest)
+        code = _run(rest)
+        _mention_hook()
+        return code
     if word == "follow":
         return _follow(rest)
     if word == "stop":
@@ -155,7 +160,7 @@ def main(argv: list[str] | None = None) -> int:
     if word == "list":
         return _list(rest)
     if word == "hook":
-        return _hook()
+        return _hook(rest)
     if word == "tools":
         return _tools()
     if word == "tool":
@@ -534,14 +539,26 @@ def _list(args: list[str]) -> int:
     return 0
 
 
-def _hook() -> int:
-    """Answer one shell-command event, read from stdin as JSON.
+def _hook(args: list[str]) -> int:
+    """Answer one shell-command event, or set up the routing that sends them.
+
+    Answering is what a client calls; the two flags are what a person types. They
+    live on the same word because they are the same subject, and somebody who has
+    just read about `sift hook` should not have to find out that setting it up is
+    called something else.
 
     Everything about this is written to fail open. Unreadable input, an
     unexpected shape, a bug underneath -- each of them prints an empty answer,
     which the client reads as *carry on*, and the command runs exactly as it
     would have. A gate that breaks a shell is worse than no gate.
     """
+    if "--install" in args:
+        return _install_hook(yes="--yes" in args)
+    if "--uninstall" in args:
+        done, said = hook_module.uninstall()
+        print(said, file=sys.stderr if not done else sys.stdout)
+        return 0 if done else 1
+
     try:
         event = json.loads(sys.stdin.read() or "{}")
     except (OSError, ValueError):
@@ -723,6 +740,65 @@ def _gc(args: list[str]) -> int:
         print(f"{forgotten} remembered {remembered} dropped, {freed_answers:,} B.")
     return 0
 
+
+
+
+def _install_hook(yes: bool) -> int:
+    """Show what it would do, ask, and only then do it.
+
+    Asked rather than assumed, because this writes into a file the caller owns
+    and this tool does not. `--yes` is for the case where nobody is there to
+    answer; without a terminal and without it, this refuses rather than deciding
+    on somebody's behalf.
+    """
+    print(hook_module.offer())
+    print()
+    if not yes:
+        if not sys.stdin.isatty():
+            print(
+                "sift: nobody is here to answer. Add --yes to install it anyway.",
+                file=sys.stderr,
+            )
+            return 1
+        try:
+            said = input("Add it? [y/N] ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            said = ""
+        if said not in ("y", "yes"):
+            print("sift: left alone.")
+            return 0
+
+    done, said = hook_module.install()
+    print(said, file=sys.stdout if done else sys.stderr)
+    return 0 if done else 1
+
+
+# Said once, ever, and then never again.
+#
+# The alternative to mentioning it is that nobody finds it: this is the part of
+# the tool that pays most and the only part that has to be turned on, and a
+# feature nobody knows about is a feature nobody has. The alternative to saying
+# it once is nagging, which is how a message stops being read.
+TOLD = "told-about-hook"
+
+
+def _mention_hook() -> None:
+    """Tell the reader, one time, that the client's own shell can come here too."""
+    if hook_module.installed() or not hook_module.wanted():
+        return
+    marker = store.home() / TOLD
+    if marker.exists():
+        return
+    with contextlib.suppress(OSError):
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.touch()
+    print(
+        "\nsift: your client runs shell commands of its own, and those still land"
+        "\n      in the conversation whole. `sift hook --install` explains what"
+        "\n      routing them here would give, and asks before changing anything."
+        "\n      (said once)",
+        file=sys.stderr,
+    )
 
 def _seconds(written: str) -> float | None:
     try:

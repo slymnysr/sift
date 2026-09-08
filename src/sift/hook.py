@@ -31,7 +31,10 @@ a shell is worse than no gate, and this one is allowed to break.
 
 from __future__ import annotations
 
+import contextlib
+import json
 import os
+from pathlib import Path
 
 from sift.capture import run
 from sift.view import best_view, footer
@@ -88,3 +91,185 @@ def answer(event: dict) -> dict:
             "permissionDecisionReason": said,
         }
     }
+
+
+# Where the client keeps the settings this would be written into, and the one
+# line that would be written. `SIFT_SETTINGS` moves it, which is how this is
+# tested without touching the file somebody actually uses.
+SETTINGS = "~/.claude/settings.json"
+COMMAND = "sift hook"
+EVENT = "PreToolUse"
+MATCHER = "Bash"
+
+# What somebody is told before they are asked. Everything it gives and
+# everything it costs, in the order somebody deciding would want them.
+OFFER = """\
+sift can also catch the shell commands the client runs on its own.
+
+Right now sift only sees what you or the client explicitly hand it. A coding
+agent runs a great deal of shell besides that, and all of it lands in the
+conversation whole -- and is re-sent on every turn after.
+
+With this on, every shell command the client runs goes through sift first: it
+runs the command, keeps every byte, and hands back the lines that mattered.
+Nothing decides which commands are "worth" catching, because how much a command
+prints is not knowable before it runs. Twelve lines in, twelve lines out.
+
+What it costs, honestly:
+
+  * A command that outruns the client's hook timeout is killed there, and the
+    client then runs it itself -- so a very long command can run twice. Keep
+    this in mind for anything that should not happen twice.
+  * Every caught command costs one model request.
+
+It fails open: a bug in it leaves your shell exactly as it was, and
+`SIFT_HOOK=0` switches it off without touching your settings again.
+
+This would add one line to {where}:
+
+    {event} / {matcher} -> {command}
+
+Nothing already in that file is changed or removed."""
+
+
+def settings_file() -> Path:
+    """The settings file this writes into, with `SIFT_SETTINGS` overriding."""
+    return Path(os.environ.get("SIFT_SETTINGS") or SETTINGS).expanduser()
+
+
+def offer() -> str:
+    """The notice, with the real paths filled in."""
+    return OFFER.format(
+        where=settings_file(), event=EVENT, matcher=MATCHER, command=COMMAND
+    )
+
+
+def _entries(settings: dict) -> list | None:
+    """The list this would be added to, or None if the file is not that shape.
+
+    Refusing an unfamiliar shape rather than reshaping it is the whole of the
+    safety here. This writes into a file somebody else owns, which may hold
+    hooks they depend on; a merge that is not certain what it is merging into
+    should not merge.
+    """
+    hooks = settings.get("hooks", {})
+    if not isinstance(hooks, dict):
+        return None
+    found = hooks.setdefault(EVENT, [])
+    return found if isinstance(found, list) else None
+
+
+def installed(settings: dict | None = None) -> bool:
+    """Whether the client is already routing its shell commands here."""
+    if settings is None:
+        settings = read_settings() or {}
+    entries = _entries(dict(settings))
+    if entries is None:
+        return False
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        for one in entry.get("hooks", []) or []:
+            if isinstance(one, dict) and COMMAND in str(one.get("command", "")):
+                return True
+    return False
+
+
+def read_settings() -> dict | None:
+    """What is in the settings file, {} if there is none, None if it is not JSON."""
+    path = settings_file()
+    if not path.is_file():
+        return {}
+    try:
+        found = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return found if isinstance(found, dict) else None
+
+
+def install() -> tuple[bool, str]:
+    """Add the routing, without disturbing anything already there.
+
+    A copy of the original is kept beside it the first time, because this edits
+    a file this tool does not own and did not write.
+    """
+    settings = read_settings()
+    if settings is None:
+        return False, f"sift: {settings_file()} is not JSON this can add to safely."
+    if installed(settings):
+        return True, "sift: the shell is already routed here. Nothing to do."
+
+    entries = _entries(settings)
+    if entries is None:
+        return False, f"sift: {settings_file()} has hooks in a shape this cannot merge."
+
+    path = settings_file()
+    backup = path.with_suffix(path.suffix + ".before-sift")
+    if path.is_file() and not backup.exists():
+        with contextlib.suppress(OSError):
+            backup.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
+
+    for entry in entries:
+        if isinstance(entry, dict) and entry.get("matcher") == MATCHER:
+            mine = entry.setdefault("hooks", [])
+            if isinstance(mine, list):
+                mine.append({"type": "command", "command": COMMAND})
+                break
+            return False, f"sift: the {MATCHER} entry has hooks this cannot merge."
+    else:
+        entries.append(
+            {"matcher": MATCHER, "hooks": [{"type": "command", "command": COMMAND}]}
+        )
+
+    settings.setdefault("hooks", {})[EVENT] = entries
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(settings, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+    except OSError as exc:
+        return False, f"sift: could not write {path} ({exc})"
+
+    kept = f" The file as it was is in {backup.name}." if backup.exists() else ""
+    return True, (
+        f"sift: the shell is routed here now. Restart the client for it to take"
+        f" effect.{kept}\n"
+        f"      Undo with `sift hook --uninstall`, or switch it off for one"
+        f" session with SIFT_HOOK=0."
+    )
+
+
+def uninstall() -> tuple[bool, str]:
+    """Take the routing out again, and leave everything else exactly as it was."""
+    settings = read_settings()
+    if settings is None:
+        return False, f"sift: {settings_file()} is not JSON this can edit safely."
+    if not installed(settings):
+        return True, "sift: the shell was not routed here. Nothing to do."
+
+    entries = _entries(settings) or []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        mine = entry.get("hooks")
+        if isinstance(mine, list):
+            entry["hooks"] = [
+                one
+                for one in mine
+                if not (isinstance(one, dict) and COMMAND in str(one.get("command", "")))
+            ]
+    # An entry whose only hook was this one is removed; one that had others keeps
+    # them. Leaving an empty matcher behind would be leaving litter in somebody
+    # else's file.
+    settings["hooks"][EVENT] = [
+        entry
+        for entry in entries
+        if not (isinstance(entry, dict) and entry.get("hooks") == [])
+    ]
+    try:
+        settings_file().write_text(
+            json.dumps(settings, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+    except OSError as exc:
+        return False, f"sift: could not write {settings_file()} ({exc})"
+    return True, "sift: the shell is no longer routed here."
