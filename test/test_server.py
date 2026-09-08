@@ -239,7 +239,7 @@ def _without_mcp(code: str) -> subprocess.CompletedProcess[str]:
 
 
 def test_the_tool_still_works_for_someone_who_never_installed_mcp():
-    """`pip install sift-mcp` brings nothing with it, and has to keep working.
+    """`pip install sift-cli` brings nothing with it, and has to keep working.
 
     The server is an extra. Someone who wants the command and not the protocol
     should not be made to carry a web framework to get it.
@@ -254,7 +254,7 @@ def test_and_the_test_above_would_have_noticed():
     """Teeth: the block has to be able to block, or the test above proves nothing.
 
     What comes out is also the second thing being checked. `pip install
-    sift-mcp` and then `claude mcp add` is an ordinary thing to do wrong, and
+    sift-cli` and then `claude mcp add` is an ordinary thing to do wrong, and
     what the client shows for it used to be a `ModuleNotFoundError` traceback
     pointing into somebody else's site-packages. A sentence naming the one
     command that fixes it is worth more than a stack that names the cause.
@@ -262,7 +262,7 @@ def test_and_the_test_above_would_have_noticed():
     finished = _without_mcp("import sift.server\n")
 
     assert finished.returncode != 0
-    assert 'pip install "sift-mcp[mcp]"' in finished.stderr
+    assert 'pip install "sift-cli[mcp]"' in finished.stderr
     assert "Traceback" not in finished.stderr
     assert "`sift`) is already installed" in finished.stderr
 

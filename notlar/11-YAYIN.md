@@ -91,7 +91,7 @@ bağımlı olmamalı. Üçüncü kural burada da geçerli.
 Kodun yapamayacağı üç adım kaldı ve hepsi hesap sahibinin:
 
 1. Depoyu herkese açık yap.
-2. PyPI'de güvenilir yayınlayıcıyı tanımla — proje `sift-mcp`, iş akışı
+2. PyPI'de güvenilir yayınlayıcıyı tanımla — proje `sift-cli`, iş akışı
    `release.yml`, ortam `pypi`.
 3. `v1.0.0` etiketini at.
 

@@ -223,7 +223,7 @@ result is re-sent on every turn that follows it, so a build log kept out of a
 transcript goes on staying out of it.
 
 ```bash
-pip install "sift-mcp[mcp]"
+pip install "sift-cli[mcp]"
 export SIFT_API_KEY=nvapi-...     # yours; see Installing
 claude mcp add sift -- sift-mcp
 ```
@@ -245,9 +245,14 @@ the lines or none could be reached.
 ## Installing
 
 ```bash
-pip install sift-mcp            # the command line, no dependencies at all
-pip install "sift-mcp[mcp]"     # and the MCP server
+pip install sift-cli            # the command line, no dependencies at all
+pip install "sift-cli[mcp]"     # and the MCP server
 ```
+
+The package is `sift-cli` and the commands are `sift` and `sift-mcp`. The names
+differ because `sift-mcp` on PyPI belongs to somebody else's project — an
+unrelated MCP server about authorising agent actions. Nothing here is theirs and
+nothing there is this.
 
 Python 3.12 or newer, and no dependencies for the command line.
 

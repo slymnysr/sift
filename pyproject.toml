@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "sift-mcp"
+name = "sift-cli"
 version = "1.0.0"
 description = "Runs your command, then gives the model only the lines that matter."
 readme = "README.md"
