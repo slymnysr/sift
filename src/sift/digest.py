@@ -27,10 +27,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sift.distill import BUDGET, View, select
+from sift import lines as text_lines
+from sift import records
+from sift.distill import BUDGET, RECORDS, View, select
 from sift.fallback import from_lines
 from sift.model import Bridge
-from sift.outline import read
+from sift.outline import text_of
 
 QUESTION = (
     "You are given a file, numbered by line. It is something that was already "
@@ -62,12 +64,25 @@ def digest(
     reason: a view that pretended to have been chosen would be worse than one
     that admits it was not.
     """
+    text = text_of(path)
+    found = records.of(text)
+    ceiling = BUDGET if budget is None else budget
+    if found is not None:
+        return select(
+            found,
+            RECORDS,
+            str(path),
+            bridge,
+            budget=ceiling,
+            keep=keep,
+            unit="record",
+        )
     return select(
-        read(path),
+        text_lines.of(text),
         QUESTION,
         str(path),
         bridge,
-        budget=BUDGET if budget is None else budget,
+        budget=ceiling,
         keep=keep,
     )
 
@@ -79,4 +94,8 @@ def ends_of(path: str | Path) -> View:
     came out, which is a better guess here than it is for source code and still
     only a guess. Every line it skips is counted and named.
     """
-    return from_lines(read(path), str(path))
+    text = text_of(path)
+    found = records.of(text)
+    if found is not None:
+        return from_lines(found, str(path), unit="record")
+    return from_lines(text_lines.of(text), str(path))

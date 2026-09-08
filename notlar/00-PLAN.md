@@ -60,6 +60,11 @@ sonraki faza geçilmez.
 | 16 | Hafıza | bu dizinde ne çalıştı, nasıl gitti, hangi hata tekrar ediyor | bitti — [16-HAFIZA.md](16-HAFIZA.md) |
 | 17 | Yoğun araçlar | `sg` / `diff` / `loc` çalıştır, çıktısını damıt | bitti — [17-YOGUN-ARACLAR.md](17-YOGUN-ARACLAR.md) |
 | 18 | Kapsam | hook: istemcinin kendi kabuk çağrıları buraya gelsin | bitti — [18-KAPSAM.md](18-KAPSAM.md) |
+| 19 | Kalıntı mutasyon | bataryanın bozduğu kural diskte kalmasın; yıkıcı işlemin önünde iki bağımsız koruma | bitti — [19-KALINTI-MUTASYON.md](19-KALINTI-MUTASYON.md) |
+| 20 | Kayıt birimi | satırın birim olmadığı metinde kaydı birim yap | bitti — [20-KAYIT-BIRIMI.md](20-KAYIT-BIRIMI.md) |
+| 21 | Saklama | yakalamalar sonsuza birikmesin; silinen kayıt sessiz kalmasın | bitti — [21-SAKLAMA.md](21-SAKLAMA.md) |
+| 22 | Yanıt önbelleği | aynı girdiye aynı görünüm, ikinci kez sorulmadan | bitti — [22-YANIT-ONBELLEGI.md](22-YANIT-ONBELLEGI.md) |
+| 23 | Ölçüm birimi | `stats` baytı değil, kurulan kişinin sorduğu şeyi saysın | bitti — [23-OLCUM-BIRIMI.md](23-OLCUM-BIRIMI.md) |
 
 ## Ek fazlar — neden sonradan çıktılar
 
@@ -78,6 +83,47 @@ tüm konuşmayı API'ye giderken damıtıyor. Bu, komutun çıktığı yerde dur
 kendi çalıştırdığını görür" duruşunu bozar. Kapsam genişletmesi 18. fazda
 **hook** ile yapılıyor: istemcinin kendi kabuk çağrısı buraya yönlendirilir,
 komutu yine sift çalıştırır, ve hiçbir şey araya girmez.
+
+## 20-23 — bir rakip okunarak çıktı
+
+18 faz kapandıktan sonra bağımsız bir proje bulundu: **Headroom**
+(`headroomlabs-ai/headroom`), Rust ile yazılmış bir bağlam sıkıştırma katmanı;
+kütüphane, vekil ve MCP sunucusu olarak çalışıyor. Aynı cümleyi kuruyor: araç
+çıktısı bağlamı dolduruyor ve her turda yeniden gönderiliyor.
+
+İskeleti de aynı: ham veri yerelde durur, geriye bir tutamak verilir, isteyince
+aslı geri alınır (`headroom_retrieve` ↔ `sift peek`). Bağımsız iki proje aynı
+şekle varmış.
+
+Ayrıldıkları yer tek ve her şeyi belirliyor: **Headroom metni yeniden yazar,
+sift satır seçer.** Bu yüzden Headroom doğruluk tablosu yayınlamak zorunda —
+GSM8K 0.870 → 0.870, SQuAD %97 — çünkü kaybedebilir. Buranın böyle bir tablosu
+olamaz, çünkü kaybedecek bir şeyi yok.
+
+Karşılaştırmadan dört boşluk çıktı, ve dördü de "onlarda var" diye değil,
+**burada ölçülebilir bir eksik** olduğu için faz oldu:
+
+- **20** — Headroom'un JSON sıkıştırıcısı, buradaki asıl deliği gösterdi:
+  seçim birimi satır. Tek satırlık 400 KB'lık bir dizide seçilecek bir şey yok.
+  Alınan şey sıkıştırma değil, **birim fikri**.
+- **21** — Headroom'un önbelleğinin bir TTL'i var. `store.py`'da hiçbir
+  temizleme yoktu: `$SIFT_HOME` sonsuza büyüyordu.
+- **22** — Headroom'un en büyük kazancı sıkıştırma değil, sağlayıcı
+  önbelleğini bozmaması. Buradaki karşılığı: aynı dosyaya iki kez sorulmasın.
+- **23** — Headroom dolar basıyor, ve ölçülemeyeni aralıkla veriyor. Buradaki
+  `stats` bayt basıyordu; kurulan kişinin sorusu bayt değil.
+
+**Alınmayanlar, gerekçesiyle:** düzyazı ve görsel sıkıştırma (1. kuralı bozar),
+vekil (aşağıda, kendi gerekçesiyle), effort/verbosity yönlendirme (istek yolunda
+oturmayı gerektirir, yani vekil), varsayılan açık telemetri (10. fazın tam
+tersi), `learn` (16. faz bilerek modelsizdir).
+
+**İstemci adaptörleri de alınmadı** ve bu bir kapsam kararıdır: `sift hook` bir
+istemcinin olay biçimini biliyor. Başkaları için adaptör yazmak, doğrulanamayan
+bir liste bakmak demek — 5. fazda dil listesinden kurtulmanın sebebi neyse, o.
+`sift hook` stdin'den JSON okur ve stdout'a JSON yazar; bir istemci bu şekli
+konuşuyorsa zaten çalışır, konuşmuyorsa aradaki çeviriyi yazmak onu kullananın
+işidir ve burada tahmin edilemez.
 
 ### Fazların ortak kuralı
 

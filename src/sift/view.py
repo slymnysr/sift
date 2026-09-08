@@ -158,7 +158,7 @@ def footer(capture: Capture, view: View, who: str) -> str:
     """One line telling the reader what they are looking at, and what they are not."""
     meta = capture.meta
     return (
-        f"sift {capture.handle} · {ending(meta)} · {view.kept:,}/{view.total:,} lines"
+        f"sift {capture.handle} · {ending(meta)} · {counted(view)}"
         f" · {who} · {meta.duration_s:.1f}s" + silence(view)
     )
 
@@ -256,7 +256,18 @@ def follow_footer(handle: str, view: View, who: str, first: int, state: str) -> 
 
 def outline_footer(path: str, view: View, who: str) -> str:
     """The same line for a file: how much of it is here, and who left the rest out."""
-    return f"sift {path} · {view.kept:,}/{view.total:,} lines · {who}" + silence(view)
+    return f"sift {path} · {counted(view)} · {who}" + silence(view)
+
+
+def counted(view: View) -> str:
+    """How much of it is here, in whatever the view was counting.
+
+    The word comes off the view rather than being written into each footer,
+    because a footer that says "lines" about a count of records is not a wording
+    slip: it is the one number this tool publishes about itself, described as
+    something it is not.
+    """
+    return f"{view.kept:,}/{view.total:,} {view.unit}s"
 
 
 def silence(view: View) -> str:

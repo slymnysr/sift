@@ -25,6 +25,7 @@ a rule that makes no claim cannot make a false one.
 from __future__ import annotations
 
 from sift import lines as text_lines
+from sift import records
 from sift.capture import Capture
 from sift.distill import View, render
 
@@ -48,7 +49,12 @@ def ends(total: int, *, head: int = HEAD, tail: int = TAIL) -> set[int]:
 
 
 def from_lines(
-    lines: list[str], handle: str, *, tail: int = TAIL, first: int = 1
+    lines: list[str],
+    handle: str,
+    *,
+    tail: int = TAIL,
+    first: int = 1,
+    unit: str = "line",
 ) -> View:
     """The ends of any numbered text, marked with what lies between them.
 
@@ -60,7 +66,7 @@ def from_lines(
     """
     total = len(lines)
     if not total:
-        return View(handle, "", 0, 0, None, 0)
+        return View(handle, "", 0, 0, None, 0, unit=unit)
 
     # `ends` counts from one because it is arithmetic about a length, not about
     # a capture. Where these lines sit in the run is the caller's business, and
@@ -68,11 +74,12 @@ def from_lines(
     chosen = {number + first - 1 for number in ends(total, head=HEAD, tail=tail)}
     return View(
         handle=handle,
-        text=render(lines, chosen, handle, first),
+        text=render(lines, chosen, handle, first, unit),
         kept=len(chosen),
         total=total,
         model=None,
         asks=0,
+        unit=unit,
     )
 
 
@@ -84,4 +91,8 @@ def fallback(capture: Capture) -> View:
     what, can decide whether to go and read the rest.
     """
     tail = TAIL_WHEN_FAILED if capture.meta.failed else TAIL
-    return from_lines(text_lines.of(capture.text()), capture.handle, tail=tail)
+    text = capture.text()
+    found = records.of(text)
+    if found is not None:
+        return from_lines(found, capture.handle, tail=tail, unit="record")
+    return from_lines(text_lines.of(text), capture.handle, tail=tail)

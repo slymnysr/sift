@@ -67,7 +67,17 @@ def read(path: str | Path) -> list[str]:
     line of its own. A file `sift` numbers has to be the file the editor beside
     it numbers, or every number in the outline points at different text.
     """
-    return text_lines.of(Path(path).read_bytes().decode("utf-8", errors="replace"))
+    return text_lines.of(text_of(path))
+
+
+def text_of(path: str | Path) -> str:
+    """The whole file, decoded the one way `sift` decodes one.
+
+    Split out because not everything that reads a file wants it in lines: whether
+    a line is even the right unit is a question about the text, and it cannot be
+    asked of something already cut into lines.
+    """
+    return Path(path).read_bytes().decode("utf-8", errors="replace")
 
 
 def outline(

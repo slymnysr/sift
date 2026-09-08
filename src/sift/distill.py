@@ -29,6 +29,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
 from sift import lines as text_lines
+from sift import records
 from sift.capture import Capture
 from sift.model import Answer, Bridge
 from sift.privacy import mask
@@ -53,6 +54,25 @@ QUESTION = (
     "that make those readable.\n"
     "Leave out repetition, progress that only says work happened, and lines that "
     "carry no information on their own.\n"
+)
+
+# What to ask when the text was a list rather than a transcript.
+#
+# The shape of the answer does not change -- numbers, and nothing else -- and
+# neither does anything under it. What changes is what the numbers count, and
+# saying so is the whole of the difference: asked "which lines matter" about a
+# list, a model answers about lines that do not exist as units.
+#
+# The last sentence is the one a transcript does not need. A reader of a log
+# wants the exceptional lines and nothing else; a reader of a list of four
+# hundred records also needs to know what the ordinary ones look like, or the
+# view says a list is made of nothing but its outliers.
+RECORDS = (
+    "You are given the records of a JSON array, numbered one per record.\n"
+    "Choose the records someone would need to understand this list: what failed, "
+    "what is unusual, what marks a boundary or a change.\n"
+    "Leave out records that say the same thing another one already says, but keep "
+    "a few ordinary ones, so that what the rest look like can be seen.\n"
 )
 
 # What to ask about the part of a command that has arrived since the last look.
@@ -151,6 +171,12 @@ class View:
     # exactly like a view that got all seven -- shorter, and no less confident.
     # Counting them is what lets the footer tell those two apart.
     unanswered: int = 0
+    # What `kept` and `total` are counting. A line, unless the text was a JSON
+    # array, in which case a line was never a unit and a record is. Carried on
+    # the view rather than worked out again by whoever prints it: two places
+    # deciding this separately is two places that can disagree about what a
+    # number means, and the number is the whole of what a footer says.
+    unit: str = "line"
 
     @property
     def folded(self) -> int:
@@ -246,17 +272,30 @@ def runs(chosen: set[int]) -> list[tuple[int, int]]:
     return stretches
 
 
-def gap(count: int, handle: str) -> str:
-    """The mark left where lines were folded away.
+def gap(count: int, handle: str, unit: str = "line") -> str:
+    """The mark left where units were folded away.
 
     It says how many, and how to read them. A view that hid things silently
     would be asking to be trusted; this one can be checked.
+
+    `peek` is addressed in lines, so the sentence changes with the unit rather
+    than pretending records can be asked for by number. What it points at is the
+    same capture either way, and that is what the second rule promises: not that
+    every unit has an address, but that nothing was thrown away.
     """
-    word = "line" if count == 1 else "lines"
-    return f"─ {count:,} {word} not shown · sift peek {handle} for any of them ─"
+    word = unit if count == 1 else unit + "s"
+    if unit == "line":
+        return f"─ {count:,} {word} not shown · sift peek {handle} for any of them ─"
+    return f"─ {count:,} {word} not shown · sift peek {handle} for the text they came from ─"
 
 
-def render(lines: list[str], chosen: set[int], handle: str, first: int = 1) -> str:
+def render(
+    lines: list[str],
+    chosen: set[int],
+    handle: str,
+    first: int = 1,
+    unit: str = "line",
+) -> str:
     """The view: chosen lines exactly as captured, gaps marked with their size.
 
     Nothing before `first` is marked as a gap. For a whole capture there is
@@ -268,12 +307,12 @@ def render(lines: list[str], chosen: set[int], handle: str, first: int = 1) -> s
     previous_end = first - 1
     for start, end in runs(chosen):
         if start > previous_end + 1:
-            pieces.append(gap(start - previous_end - 1, handle))
+            pieces.append(gap(start - previous_end - 1, handle, unit))
         pieces.extend(lines[start - first : end - first + 1])
         previous_end = end
     last = first + len(lines) - 1
     if previous_end < last:
-        pieces.append(gap(last - previous_end, handle))
+        pieces.append(gap(last - previous_end, handle, unit))
     return "\n".join(pieces)
 
 
@@ -285,8 +324,9 @@ def select(
     budget: int | None = BUDGET,
     first: int = 1,
     keep: str | None = None,
+    unit: str = "line",
 ) -> View | None:
-    """Ask one question about numbered lines, and show the ones it answers with.
+    """Ask one question about numbered units, and show the ones it answers with.
 
     The question is an argument because nothing underneath it is about failures.
     Numbering the lines, cutting a long text into asks that keep their original
@@ -320,7 +360,7 @@ def select(
     so they come back even when nobody answered.
     """
     if not lines:
-        return View(handle, "", 0, 0, None, 0)
+        return View(handle, "", 0, 0, None, 0, unit=unit)
 
     always = _always(lines, keep, first) if keep else set()
 
@@ -354,12 +394,13 @@ def select(
 
     return View(
         handle=handle,
-        text=render(lines, chosen, handle, first),
+        text=render(lines, chosen, handle, first, unit),
         kept=len(chosen),
         total=len(lines),
         model=model,
         asks=asks,
         unanswered=unanswered,
+        unit=unit,
     )
 
 
@@ -444,9 +485,28 @@ def distill(
     budget: int | None = BUDGET,
     keep: str | None = None,
 ) -> View | None:
-    """Ask which lines of a capture matter, then show those lines from it."""
+    """Ask which parts of a capture matter, then show those parts from it.
+
+    The unit is decided here and nowhere else, by asking the text rather than by
+    asking what produced it. A command that prints a JSON array is not a
+    different kind of command and there is no list here of the ones that do it;
+    `records.of` either finds an array or does not, and that answer is a fact
+    about the bytes.
+    """
+    text = capture.text()
+    found = records.of(text)
+    if found is not None:
+        return select(
+            found,
+            RECORDS,
+            capture.handle,
+            bridge,
+            budget=budget,
+            keep=keep,
+            unit="record",
+        )
     return select(
-        text_lines.of(capture.text()),
+        text_lines.of(text),
         QUESTION,
         capture.handle,
         bridge,

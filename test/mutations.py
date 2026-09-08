@@ -658,6 +658,31 @@ MUTATIONS = [
         "        return list(default.missed), []",
         "        return [], []",
     ),
+    # -- Faz 20: when a line is not a unit ------------------------------------
+    Mutation(
+        "records.py",
+        "a record is a slice of the source, never a value written back",
+        "        found.append(text[at:end])",
+        "        found.append(json.dumps(json.loads(text[at:end])))",
+    ),
+    Mutation(
+        "records.py",
+        "a document that goes on after the array is not an array",
+        "    if _past_space(text, at + 1) != len(text):",
+        "    if False:",
+    ),
+    Mutation(
+        "records.py",
+        "one record is not a choice between records",
+        "FEWEST = 2",
+        "FEWEST = 1",
+    ),
+    Mutation(
+        "distill.py",
+        "a gap says what it is counting",
+        '    word = unit if count == 1 else unit + "s"',
+        '    word = "line" if count == 1 else "lines"',
+    ),
     # -- Faz 9: a command left running ---------------------------------------
     Mutation(
         "background.py",
