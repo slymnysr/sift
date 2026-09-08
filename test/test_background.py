@@ -272,7 +272,12 @@ def test_a_look_is_not_a_read_until_the_reader_has_been_handed_it():
 def test_the_supervisor_runs_the_command_and_writes_down_how_it_ended():
     code = watch.watch(
         "aaaa1111",
-        [sys.executable, "-c", "print('merhaba'); raise SystemExit(3)"],
+        [
+            sys.executable,
+            "-c",
+            f"import sys; sys.stdout.buffer.write({b'merhaba\n'!r});"
+            " raise SystemExit(3)",
+        ],
         started_at=store.now(),
     )
     meta = store.load("aaaa1111")

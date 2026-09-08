@@ -156,7 +156,7 @@ def test_running_a_command_sweeps_nothing():
     old = _capture("old enough to go")
     _age(old, days=4000)
 
-    assert cli.main(["run", "--", "python3", "-c", "print('hello')"]) == 0
+    assert cli.main(["run", "--", sys.executable, "-c", "pass"]) == 0
     assert cli.main(["list"]) == 0
     assert cli.main(["stats"]) == 0
 
