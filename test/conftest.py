@@ -32,9 +32,31 @@ import os
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from mutations import MUTATING, undo_leftover
+
+
+@pytest.fixture(autouse=True)
+def _own_store(tmp_path, monkeypatch):
+    """No test writes into the store somebody actually uses.
+
+    Most test files set this themselves and always did. `test_lines.py` did not,
+    because it is about where a line ends and looks like it touches nothing --
+    and it runs real commands to find out, and every one of them landed in
+    `~/.cache/sift`. Measured: 516 captures, from two files, accumulated there
+    across this project's own test runs, and nobody noticed because they are
+    seventeen bytes each and nothing ever lists them.
+
+    That is the shape of the bug worth guarding against rather than fixing once:
+    it is not that a file forgot, it is that forgetting was possible and silent.
+    So the isolation stops being something each file remembers and becomes
+    something none of them can opt out of. A file that sets `SIFT_HOME` again
+    for its own reasons still wins; it just no longer has to.
+    """
+    monkeypatch.setenv("SIFT_HOME", str(tmp_path / "sift"))
 
 
 def pytest_configure(config: object) -> None:

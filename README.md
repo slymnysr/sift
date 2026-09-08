@@ -109,9 +109,16 @@ SIFT_MASK=0       # send unmasked
 Masking is not complete and does not claim to be: a bare secret shaped like
 nothing in particular gets through. `SIFT_NO_MODEL` is the one that guarantees.
 
-Captured bytes never leave `$SIFT_HOME` (`~/.sift` by default). Nothing is
+Captured bytes never leave `$SIFT_HOME` (`~/.cache/sift` by default). Nothing is
 uploaded, nothing is logged elsewhere, and removing a capture directory removes
 everything that was ever kept about it.
+
+They also never go away on their own. Nothing here sweeps, expires or tidies in
+the background: `sift gc [DAYS]` is the only thing that deletes a capture, and
+it deletes when you type it and not before. What it leaves is one line per
+handle — when it went and how big it was, never the command — so that a gap
+marker read a fortnight later gets *"removed on the 8th"* instead of the answer
+it would give for a handle you made up.
 
 ## Commands
 
@@ -130,6 +137,7 @@ sift tool NAME [ARGS...]  run one of them, distilled
 sift memory [TERM]        what has been run here before, and how it went
 sift list [COUNT]         what is running, and what has been run
 sift stats [COUNT]        what the shortening cost, and what it saved
+sift gc [DAYS]            remove captures older than that, and say what went
 ```
 
 Several paths given to `digest` are asked about at the same time, and `--all`

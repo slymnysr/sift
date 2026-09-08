@@ -683,6 +683,32 @@ MUTATIONS = [
         '    word = unit if count == 1 else unit + "s"',
         '    word = "line" if count == 1 else "lines"',
     ),
+    # -- Faz 21: the only thing here that deletes ----------------------------
+    Mutation(
+        "store.py",
+        "a run still marked running is never swept",
+        "        if running_path(handle).is_file():",
+        "        if False:",
+    ),
+    Mutation(
+        "store.py",
+        "a capture whose age is unknown is not deleted on a guess",
+        "        if ended is None or ended > cut:",
+        "        if ended is not None and ended > cut:",
+    ),
+    Mutation(
+        "store.py",
+        "what a removed capture ran is removed with it",
+        '        stones[handle] = {"removed_at": now(), "byte_count": size}',
+        '        stones[handle] = {"removed_at": now(), "byte_count": size,'
+        ' "command": list(meta.command) if meta else []}',
+    ),
+    Mutation(
+        "peek.py",
+        "a swept handle is answered differently from one that never existed",
+        "        if removed is not None:",
+        "        if False:",
+    ),
     # -- Faz 9: a command left running ---------------------------------------
     Mutation(
         "background.py",

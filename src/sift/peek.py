@@ -13,6 +13,7 @@ something did not add up, and at that moment anything helpful is in the way.
 from __future__ import annotations
 
 import re
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -51,6 +52,13 @@ def bytes_of(handle: str) -> bytes:
     try:
         return store.read_raw(handle)
     except FileNotFoundError:
+        removed = store.gone(handle)
+        if removed is not None:
+            when = time.strftime("%Y-%m-%d", time.localtime(removed.removed_at))
+            raise FileNotFoundError(
+                f"capture {handle!r} was removed by sift gc on {when}"
+                f" ({removed.byte_count:,} bytes)"
+            ) from None
         found = Path(handle)
         if not found.is_file():
             raise

@@ -35,6 +35,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import shutil
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -343,3 +344,151 @@ def savings(limit: int = 20) -> list[tuple[Meta, Saving]]:
 
 def now() -> float:
     return time.time()
+
+
+# What `sift gc` calls old when nobody says otherwise, in days.
+#
+# There is no automatic sweep and there is not going to be one. "Nothing is
+# thrown away" is the second of the three rules, and a tool that quietly deleted
+# a capture on its own initiative would be breaking it whatever the age. What a
+# person types is a different act: `sift gc` is them throwing something away,
+# and this number only decides what the command means when they do not say.
+KEEP_DAYS = 30
+
+
+def keep_days() -> float:
+    """How old is old, with `SIFT_KEEP_DAYS` overriding."""
+    written = os.environ.get("SIFT_KEEP_DAYS", "").strip()
+    try:
+        asked = float(written)
+    except ValueError:
+        return float(KEEP_DAYS)
+    return asked if asked > 0 else float(KEEP_DAYS)
+
+
+def gone_path() -> Path:
+    """One file for every capture `gc` has removed, not one directory each.
+
+    A stone per capture was the first shape and it was wrong twice over. It
+    leaves a directory behind for every run ever swept -- 518 of them, four
+    kilobytes of block each, to hold fifty-two bytes -- so a sweep that was
+    supposed to reclaim space keeps a permanent tax on having had it. And it
+    means a capture directory is never actually gone, which is precisely what
+    the README promises about one somebody removes by hand.
+
+    So the directory goes entirely, and what it was is written here.
+    """
+    return home() / "gone.json"
+
+
+@dataclass(frozen=True)
+class Gone:
+    """A capture that was removed, and the little that outlives it."""
+
+    handle: str
+    removed_at: float
+    byte_count: int
+
+
+def _stones() -> dict[str, dict]:
+    try:
+        data = json.loads(gone_path().read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def gone(handle: str) -> Gone | None:
+    """Whether this handle names something that was here and was removed.
+
+    What is kept is a handle, a date and a size, and nothing else. Not the
+    command, not a line of output, not the working directory: a handle is a hash
+    and gives nothing back, while the command would be the most identifying part
+    of what was just deleted.
+
+    It is kept at all for the second rule. A gap marker says `sift peek 9f2c41ab`
+    and may be read a week later; without this, that lands on "no such capture",
+    which is the answer for a handle somebody invented. Those two are not the
+    same and a reader acts on them differently.
+    """
+    found = _stones().get(handle)
+    if found is None:
+        return None
+    return Gone(
+        handle=handle,
+        removed_at=float(found.get("removed_at", 0.0)),
+        byte_count=int(found.get("byte_count", 0)),
+    )
+
+
+@dataclass(frozen=True)
+class Swept:
+    """One capture that `sift gc` removed, described while it still could be."""
+
+    handle: str
+    command: list[str]
+    byte_count: int
+
+
+def sweep(older_than: float, now_at: float | None = None) -> list[Swept]:
+    """Remove every finished capture that ended more than `older_than` ago.
+
+    Three things are never swept, and each refusal is a rule rather than a
+    caution. A run still marked running is left alone: nobody knows how it came
+    out, and its supervisor is still writing to the file this would delete. A
+    capture whose age cannot be established is left alone -- guessing an age
+    would mean deleting on a guess.
+
+    What comes back is what went, described from the metadata while it was still
+    there to read. The caller prints it; nothing else records it.
+    """
+    where = captures_dir()
+    if not where.is_dir():
+        return []
+    cut = (now() if now_at is None else now_at) - older_than
+    stones = _stones()
+    swept: list[Swept] = []
+    for entry in sorted(where.iterdir()):
+        if not entry.is_dir():
+            continue
+        handle = entry.name
+        if running_path(handle).is_file():
+            continue
+        meta = load(handle)
+        ended = _ended_at(handle, meta)
+        if ended is None or ended > cut:
+            continue
+
+        raw = raw_path(handle)
+        size = raw.stat().st_size if raw.is_file() else 0
+        try:
+            shutil.rmtree(entry)
+        except OSError:
+            continue  # a capture that would not go is not a capture that went
+        stones[handle] = {"removed_at": now(), "byte_count": size}
+        swept.append(
+            Swept(handle, list(meta.command) if meta is not None else [], size)
+        )
+
+    if swept:
+        with contextlib.suppress(OSError):
+            gone_path().write_text(
+                json.dumps(stones, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+    return swept
+
+
+def _ended_at(handle: str, meta: Meta | None) -> float | None:
+    """When this capture stopped being written to, or None if that is unknown.
+
+    A finished run says so itself. A run that was interrupted has bytes and no
+    claims about them, and the file's own modification time is the last honest
+    thing left -- but only if the file is there. Nothing else is guessed at.
+    """
+    if meta is not None:
+        return meta.started_at + meta.duration_s
+    raw = raw_path(handle)
+    try:
+        return raw.stat().st_mtime
+    except OSError:
+        return None

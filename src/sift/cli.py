@@ -73,6 +73,7 @@ USAGE = """sift -- run a command, keep every byte, show the lines that matter
   sift tool NAME [ARGS...]            run one of them, distilled
   sift memory [TERM] [--here]
   sift stats [COUNT]
+  sift gc [DAYS]                      remove captures older than that
 
 Everything after COMMAND is passed to it unchanged. Use -- when the command
 has flags that look like sift's own.
@@ -119,6 +120,8 @@ def main(argv: list[str] | None = None) -> int:
         return _memory(rest)
     if word == "stats":
         return _stats(rest)
+    if word == "gc":
+        return _gc(rest)
     print(f"sift: no such command: {word}\n\n{USAGE}", file=sys.stderr)
     return 2
 
@@ -625,6 +628,39 @@ def _stats(args: list[str]) -> int:
         f"\n{len(found)} {word} · {raw:,} B captured · {shown:,} B shown"
         f" · {part:.1f}% of it · the other {100 - part:.1f}% is on disk, not gone"
     )
+    return 0
+
+
+def _gc(args: list[str]) -> int:
+    """Remove captures older than an age, and say what went and what it freed.
+
+    Typed, never automatic. Every other command here can be run without thinking
+    about it because none of them destroy anything; this one does, so it is only
+    ever this tool doing what somebody asked, at the moment they asked it.
+
+    What it leaves behind is a stone naming the handle and the date. A gap marker
+    printed a fortnight ago still says `sift peek 9f2c41ab`, and the person
+    following it deserves "that was removed on the 8th" rather than the answer
+    they would get for a handle they made up.
+    """
+    days = _line_number(args[0]) if args else None
+    if days is None and args:
+        print(f"sift: gc takes a number of days\n\n{USAGE}", file=sys.stderr)
+        return 2
+    age = float(days) if days is not None else store.keep_days()
+
+    swept = store.sweep(age * 86_400.0)
+    if not swept:
+        print(f"sift: no capture is older than {age:g} days.")
+        return 0
+
+    freed = 0
+    for one in swept:
+        freed += one.byte_count
+        said = " ".join(one.command) or "(a run that was interrupted)"
+        print(f"{one.handle:8}  {one.byte_count:>12,} B  {said}")
+    word = "capture" if len(swept) == 1 else "captures"
+    print(f"\n{len(swept)} {word} removed, {freed:,} B freed.")
     return 0
 
 
