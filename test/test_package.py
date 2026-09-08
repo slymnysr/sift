@@ -34,3 +34,62 @@ def test_notes_and_tests_live_in_their_own_folders():
     assert list((KOK / "notlar").glob("*.md")), "notlar/ bos olmamali"
     assert not list(KOK.glob("test_*.py")), "test dosyalari kokte durmamali"
     assert not list((KOK / "src" / "sift").glob("test_*.py")), "test kodun icinde durmamali"
+
+# -- Faz 11: the front door --------------------------------------------------
+
+
+def _readme() -> str:
+    return (KOK / "README.md").read_text(encoding="utf-8")
+
+
+def test_the_readme_names_every_command_the_tool_answers_to():
+    """The front door has to list the rooms.
+
+    A command nobody was told about is a command nobody runs, and the usage text
+    and the README are written months apart by someone who has forgotten one of
+    them. So they are compared rather than kept in step by hand.
+    """
+    from sift import cli
+
+    words = {
+        line.strip().split()[1]
+        for line in cli.USAGE.splitlines()
+        if line.strip().startswith("sift ")
+    }
+    assert words, "usage metninden komut cikarilamadi"
+
+    readme = _readme()
+    missing = [word for word in sorted(words) if f"sift {word}" not in readme]
+    assert not missing, f"README bu komutlardan hic bahsetmiyor: {missing}"
+
+
+def test_the_readme_names_every_tool_the_server_offers():
+    """And promises no tool that is not there.
+
+    Both directions matter. A tool left out of the README is a tool nobody
+    calls; a tool promised and not offered is a caller told to use something
+    that will fail.
+    """
+    from test_server import TOOLS
+
+    readme = _readme()
+    for name in sorted(TOOLS):
+        assert f"`{name}`" in readme, f"README {name!r} aracindan bahsetmiyor"
+
+    # Boslugu duzlestirerek: bir iddia, README'nin satir sonlarina bagli olmamali.
+    flat = " ".join(readme.split())
+    assert "`list` and `stats` are deliberately not offered" in flat
+
+
+def test_publishing_happens_on_a_tag_and_nowhere_else():
+    """A version that exists on PyPI cannot be taken back.
+
+    So the difference between merged and released has to be a deliberate act.
+    This is checked rather than trusted because the mistake it prevents is one
+    that can only be made once.
+    """
+    release = (KOK / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+
+    assert 'tags: ["v*"]' in release
+    assert "branches:" not in release, "yayin bir dala baglanmis"
+    assert "id-token: write" in release, "guvenilir yayinlama acik degil"

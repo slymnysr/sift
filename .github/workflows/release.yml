@@ -1,0 +1,77 @@
+name: release
+
+# Publishing happens on a tag and nowhere else. A push to main must never be
+# able to put something on PyPI: a version that exists cannot be taken back, and
+# the difference between "merged" and "released" is the whole point of a tag.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # The same checks CI runs, run again here against the exact commit the tag
+  # points at. CI having been green on that commit earlier is not the same
+  # claim: a tag can be moved, and a release is the one place to be sure.
+  check:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install
+        run: uv sync --all-extras --dev
+      - name: Lint
+        run: uv run ruff check src test
+      - name: Test
+        run: uv run pytest -q --no-header
+
+  build:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+
+      # The tag and the version in the package have to be the same thing. They
+      # are written in two places by two people at two times, so they are
+      # compared here rather than trusted -- a wheel whose name disagrees with
+      # its tag is a release nobody can reason about afterwards.
+      - name: The tag and the version agree
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version=$(uv run python -c "import tomllib,pathlib;print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
+          echo "tag=$tag version=$version"
+          test "$tag" = "$version"
+
+      - name: Build
+        run: uv build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    # Trusted publishing: PyPI is told which repository and which workflow may
+    # publish this project, and GitHub signs a short-lived token to prove it.
+    # No API token is stored anywhere, so there is none to leak or to rotate.
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

@@ -20,15 +20,18 @@ already. There is no table here to be missing an entry.
 
 from __future__ import annotations
 
+import contextlib
 import os
 import re
-from collections.abc import Iterable
+import threading
+from collections.abc import Iterable, Iterator
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
 from sift import lines as text_lines
 from sift.capture import Capture
 from sift.model import Answer, Bridge
+from sift.privacy import mask
 
 # Every question asked through `select` is answered the same way, because one
 # parser reads every answer. `select` appends it rather than each question ending
@@ -50,6 +53,24 @@ QUESTION = (
     "that make those readable.\n"
     "Leave out repetition, progress that only says work happened, and lines that "
     "carry no information on their own.\n"
+)
+
+# What to ask about the part of a command that has arrived since the last look.
+#
+# The difference from `QUESTION` is not tone, it is what is true. There is no
+# final result yet, and asking for one invites a model to nominate whichever
+# line happens to be nearest the end. And the reader has already been shown
+# everything before these lines, so a line that repeats what they read ten
+# minutes ago is worth less here than the same line would be in a capture read
+# once, at the end, by someone who was not watching.
+FOLLOWING = (
+    "You are given the numbered output a command has produced since it was last "
+    "looked at. The command is still running: this is the middle of the output, "
+    "not the end of it, and there is no final result here to find.\n"
+    "Choose the lines that tell someone watching what has happened since they "
+    "last looked: what failed, what warned, what finished, what changed.\n"
+    "Leave out progress that only says work is still going on. If nothing here "
+    "is worth interrupting them for, choose nothing at all.\n"
 )
 
 # One ask covers this much of the transcript. Most captures fit in a single one;
@@ -143,10 +164,18 @@ def rows(pairs: Iterable[tuple[int, str]], cap: int = PROMPT_LINE_CAP) -> str:
     about a shortlist -- lines 12, 400 and 9,981 of a capture, with nothing
     between them. They have to keep the numbers they had there, or an answer
     about the shortlist would name lines of the capture nobody asked about.
+
+    This is the only place capture text is turned into something that leaves the
+    machine, which is why the masking happens here and nowhere else. What is
+    shown to the reader is rendered somewhere else entirely, from the file, and
+    is never touched by it.
     """
     out = []
     for number, line in pairs:
-        shown = line if len(line) <= cap else line[:cap] + " …"
+        # Masked before it is shortened, not after. Half a secret is still a
+        # secret, and a pattern cannot recognise the half it is shown.
+        safe = mask(line)
+        shown = safe if len(safe) <= cap else safe[:cap] + " …"
         out.append(f"{number}| {shown}")
     return "\n".join(out)
 
@@ -180,7 +209,7 @@ def ceiling(budget: int, asks: int) -> str:
     )
 
 
-def read_numbers(answer: str, total: int) -> set[int]:
+def read_numbers(answer: str, total: int, first: int = 1) -> set[int]:
     """Every line number in the model's reply, and nothing else from it.
 
     Prose around the numbers is ignored rather than rejected: a model that
@@ -188,6 +217,11 @@ def read_numbers(answer: str, total: int) -> set[int]:
     part that cannot be trusted. Numbers outside the capture are dropped -- a
     line that does not exist cannot be shown, and inventing one is exactly what
     this design exists to prevent.
+
+    `first` is where the numbering starts, which is 1 for a whole capture and
+    the line after the last one already read for a command still running. The
+    bound moves with it: a model shown lines 812 to 900 that answers "4" is
+    answering about a line nobody showed it.
     """
     chosen: set[int] = set()
     for low, high, single in _NUMBERS.findall(answer):
@@ -195,8 +229,8 @@ def read_numbers(answer: str, total: int) -> set[int]:
             start = end = int(single)
         else:
             start, end = sorted((int(low), int(high)))
-        start = max(start, 1)
-        end = min(end, total)
+        start = max(start, first)
+        end = min(end, first + total - 1)
         chosen.update(range(start, end + 1))
     return chosen
 
@@ -222,17 +256,24 @@ def gap(count: int, handle: str) -> str:
     return f"─ {count:,} {word} not shown · sift peek {handle} for any of them ─"
 
 
-def render(lines: list[str], chosen: set[int], handle: str) -> str:
-    """The view: chosen lines exactly as captured, gaps marked with their size."""
+def render(lines: list[str], chosen: set[int], handle: str, first: int = 1) -> str:
+    """The view: chosen lines exactly as captured, gaps marked with their size.
+
+    Nothing before `first` is marked as a gap. For a whole capture there is
+    nothing before it; for a command still running, what came before was already
+    handed to the reader in an earlier look, and marking it "not shown" would be
+    telling them they missed something they have already been given.
+    """
     pieces: list[str] = []
-    previous_end = 0
+    previous_end = first - 1
     for start, end in runs(chosen):
         if start > previous_end + 1:
             pieces.append(gap(start - previous_end - 1, handle))
-        pieces.extend(lines[start - 1 : end])
+        pieces.extend(lines[start - first : end - first + 1])
         previous_end = end
-    if previous_end < len(lines):
-        pieces.append(gap(len(lines) - previous_end, handle))
+    last = first + len(lines) - 1
+    if previous_end < last:
+        pieces.append(gap(last - previous_end, handle))
     return "\n".join(pieces)
 
 
@@ -242,6 +283,8 @@ def select(
     handle: str,
     bridge: Bridge | None = None,
     budget: int | None = BUDGET,
+    first: int = 1,
+    keep: str | None = None,
 ) -> View | None:
     """Ask one question about numbered lines, and show the ones it answers with.
 
@@ -257,16 +300,32 @@ def select(
     budget could only state it per ask, and would be right about one ask and
     wrong about the capture.
 
+    `first` is the number the first of these lines has in the capture it came
+    from, which is 1 unless the caller is looking at the part of a running
+    command it has not looked at yet. It is a number and not a slice because
+    every number that leaves here ends up in `sift peek`: a view whose numbers
+    started over at 1 would send the reader to the wrong line of a file that
+    disagrees with them, which is the one thing this tool promises cannot
+    happen.
+
+    `keep` is the caller's own say: any line matching it is shown, whatever the
+    model chose and whatever the ceiling allows. `_always` explains why a pattern
+    is permitted to exist here when `fallback` refuses them outright.
+
     Returns nothing when there is no usable judgement -- no key, no model that
     would answer, or an answer with no numbers in it. The caller decides what to
     do with that; falling back is not this function's business, and pretending to
-    have judged would be worse than admitting it did not.
+    have judged would be worse than admitting it did not. A `keep` that matched
+    something is judgement enough on its own: those lines were asked for by name,
+    so they come back even when nobody answered.
     """
     if not lines:
         return View(handle, "", 0, 0, None, 0)
 
+    always = _always(lines, keep, first) if keep else set()
+
     judge = bridge if bridge is not None else Bridge()
-    batches = _batches(list(enumerate(lines, 1)))
+    batches = _batches(list(enumerate(lines, first)))
     asked = prompt(question, budget, len(batches))
     chosen: set[int] = set()
     model: str | None = None
@@ -279,18 +338,23 @@ def select(
             unanswered += 1
             continue
         model = answer.model
-        chosen |= read_numbers(answer.text, len(lines))
+        chosen |= read_numbers(answer.text, len(lines), first)
 
-    if not chosen:
+    if not chosen and not always:
         return None
 
     if budget is not None and len(chosen) > budget:
-        chosen, spent = narrow(lines, chosen, question, budget, judge)
+        chosen, spent = narrow(lines, chosen, question, budget, judge, first)
         asks += spent
+
+    # After the ceiling, not inside it. A budget is this tool's opinion about
+    # what a view should cost; `keep` is an instruction, and an instruction that
+    # a default silently overrode would be worse than no instruction at all.
+    chosen |= always
 
     return View(
         handle=handle,
-        text=render(lines, chosen, handle),
+        text=render(lines, chosen, handle, first),
         kept=len(chosen),
         total=len(lines),
         model=model,
@@ -299,12 +363,34 @@ def select(
     )
 
 
+def _always(lines: list[str], keep: str, first: int) -> set[int]:
+    """The lines the caller named, whatever the model made of them.
+
+    This is the only pattern anywhere in the judging path, and it is allowed
+    because it is not this tool's pattern. A rule invented here about what output
+    looks like would be a guess about languages it half knows, wearing the
+    clothes of knowledge -- the thing `fallback` refuses in the strongest terms.
+    A pattern the caller typed is not a guess: they know what they are looking
+    for, and the only job left is to not lose it.
+
+    A pattern that will not compile is used as plain text. Someone who typed
+    `main()` meant those characters, and answering a mistyped group with silence
+    would drop the request without ever saying so.
+    """
+    try:
+        found = re.compile(keep)
+    except re.error:
+        return {n for n, line in enumerate(lines, first) if keep in line}
+    return {n for n, line in enumerate(lines, first) if found.search(line)}
+
+
 def narrow(
     lines: list[str],
     chosen: set[int],
     question: str,
     budget: int,
     judge: Bridge,
+    first: int = 1,
 ) -> tuple[set[int], int]:
     """Hand an over-long answer back and ask which part of it to keep.
 
@@ -331,15 +417,15 @@ def narrow(
     for _ in range(NARROW_ROUNDS):
         if len(chosen) <= budget:
             break
-        shortlist = [(number, lines[number - 1]) for number in sorted(chosen)]
+        shortlist = [(number, lines[number - first]) for number in sorted(chosen)]
         batches = _batches(shortlist)
         asked = prompt(question + NARROWING, budget, len(batches))
         kept: set[int] = set()
         for batch in batches:
-            answer = judge.ask(asked, rows(batch), max_tokens=2048)
+            answer = ask_one(judge, asked, batch)
             asks += 1
             if answer is not None:
-                kept |= read_numbers(answer.text, len(lines)) & chosen
+                kept |= read_numbers(answer.text, len(lines), first) & chosen
         if not kept or len(kept) >= len(chosen):
             break
         chosen = kept
@@ -352,9 +438,81 @@ def prompt(question: str, budget: int | None, asks: int) -> str:
     return question + share + ANSWER_FORMAT
 
 
-def distill(capture: Capture, bridge: Bridge | None = None) -> View | None:
+def distill(
+    capture: Capture,
+    bridge: Bridge | None = None,
+    budget: int | None = BUDGET,
+    keep: str | None = None,
+) -> View | None:
     """Ask which lines of a capture matter, then show those lines from it."""
-    return select(text_lines.of(capture.text()), QUESTION, capture.handle, bridge)
+    return select(
+        text_lines.of(capture.text()),
+        QUESTION,
+        capture.handle,
+        bridge,
+        budget=budget,
+        keep=keep,
+    )
+
+
+def follow(
+    lines: list[str],
+    handle: str,
+    first: int,
+    bridge: Bridge | None = None,
+) -> View | None:
+    """Ask which of a running command's newest lines matter, and show those.
+
+    The same engine as `distill`, with the two things that are actually
+    different made different: the question knows the output has not ended, and
+    the numbering starts where the reader's last look stopped instead of at 1.
+    """
+    return select(lines, FOLLOWING, handle, bridge, first=first)
+
+
+_GATE: dict[int, threading.Semaphore] = {}
+_GATE_LOCK = threading.Lock()
+
+
+@contextlib.contextmanager
+def in_flight() -> Iterator[None]:
+    """One ceiling on asks in the air, wherever in this process they started.
+
+    `SIFT_WORKERS` is a statement about this machine and this endpoint: how many
+    requests may be outstanding at once. It used to be read at two levels -- how
+    many samples to measure at a time, and how many pieces of one sample to ask
+    about at a time -- with nothing tying them together, so they multiplied. Six
+    became thirty-six, the free endpoint refused what it could not take, and the
+    refusals were counted as lines this tool had lost. That is written up in
+    `notlar/08`, and it cost a day.
+
+    Phase 15 makes the multiplying easy again: several files, several running
+    commands, each of them split into pieces. So the ceiling stopped being
+    arithmetic every caller has to redo, and became a gate every ask goes
+    through. A number that is enforced in one place cannot be multiplied by a
+    caller who did not know about it.
+
+    The gate is rebuilt when the setting changes, which is what makes it usable
+    from a test. Asks already through an older gate are still governed by it --
+    they finish under the ceiling they started under, which is the only sense in
+    which "changed the limit" can mean anything mid-flight.
+    """
+    size = workers()
+    with _GATE_LOCK:
+        gate = _GATE.get(size)
+        if gate is None:
+            gate = _GATE[size] = threading.Semaphore(size)
+    gate.acquire()
+    try:
+        yield
+    finally:
+        gate.release()
+
+
+def ask_one(judge: Bridge, asked: str, batch: list[tuple[int, str]]) -> Answer | None:
+    """One question, through the gate. Every ask in this file goes through here."""
+    with in_flight():
+        return judge.ask(asked, rows(batch), max_tokens=2048)
 
 
 def _ask_all(
@@ -375,11 +533,9 @@ def _ask_all(
     reasons behind rather than both. Both are true, and the caller shows one.
     """
     if len(batches) == 1:
-        return [judge.ask(asked, rows(batches[0]), max_tokens=2048)]
+        return [ask_one(judge, asked, batches[0])]
     with ThreadPoolExecutor(max_workers=min(workers(), len(batches))) as pool:
-        return list(
-            pool.map(lambda batch: judge.ask(asked, rows(batch), max_tokens=2048), batches)
-        )
+        return list(pool.map(lambda batch: ask_one(judge, asked, batch), batches))
 
 
 def _batches(pairs: list[tuple[int, str]]) -> list[list[tuple[int, str]]]:

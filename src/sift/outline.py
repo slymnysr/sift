@@ -70,7 +70,12 @@ def read(path: str | Path) -> list[str]:
     return text_lines.of(Path(path).read_bytes().decode("utf-8", errors="replace"))
 
 
-def outline(path: str | Path, bridge: Bridge | None = None) -> View | None:
+def outline(
+    path: str | Path,
+    bridge: Bridge | None = None,
+    budget: int | None = None,
+    keep: str | None = None,
+) -> View | None:
     """The declarations in `path`, chosen by a model and printed from the file.
 
     The view is handled by the path itself, so the gap marker names the way back
@@ -82,7 +87,14 @@ def outline(path: str | Path, bridge: Bridge | None = None) -> View | None:
     and a failing build are not the same length for the same reasons even when
     the number happens to match.
     """
-    return select(read(path), QUESTION, str(path), bridge, budget=BUDGET)
+    return select(
+        read(path),
+        QUESTION,
+        str(path),
+        bridge,
+        budget=BUDGET if budget is None else budget,
+        keep=keep,
+    )
 
 
 def ends_of(path: str | Path) -> View:

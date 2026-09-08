@@ -8,8 +8,10 @@ cost of being wrong has to stay at one line of a view, never at a lost byte.
 
 Layout, one directory per capture:
 
-    $SIFT_HOME/captures/<handle>/raw       the bytes, untouched
-    $SIFT_HOME/captures/<handle>/meta.json what was run, how it ended
+    $SIFT_HOME/captures/<handle>/raw         the bytes, untouched
+    $SIFT_HOME/captures/<handle>/meta.json   what was run, how it ended
+    $SIFT_HOME/captures/<handle>/running.json a command still going
+    $SIFT_HOME/captures/<handle>/read.json    how much of it a reader has seen
 
 `raw` is opened in binary and never rewritten. `meta.json` is written once the
 command has finished, which also makes it the marker for a complete capture: a
@@ -19,6 +21,13 @@ A third file, `view.json`, is written when a view is built: what the capture
 cost and what the reader was handed instead. It is what `sift stats` adds up,
 and it sits beside the capture rather than in a log of its own so that removing
 a capture removes the claim made about it, with nothing left to keep in step.
+
+`running.json` and `read.json` belong to commands that have not finished. The
+first says a process was started and left going; the second says how far into
+its output a reader has already been taken. Both are files rather than something
+held in memory because every `sift` invocation is its own process: a cursor kept
+in memory would start over at zero each time, and the reader would be handed the
+same thousand lines again -- which is the cost this tool exists to avoid.
 """
 
 from __future__ import annotations
@@ -86,12 +95,51 @@ def new_handle(command: list[str], started_at: float) -> str:
     return hashlib.sha256(seed.encode("utf-8", "replace")).hexdigest()[:_HANDLE_LENGTH]
 
 
+@dataclass(frozen=True)
+class Running:
+    """A command that was started and left to run.
+
+    `pid` is the process that was started to look after the command, not the
+    command itself. Killing that process's group ends both, and asking whether
+    it is alive is asking whether anything is still watching -- which is the
+    question a reader actually has.
+    """
+
+    handle: str
+    command: list[str]
+    shell: bool
+    cwd: str
+    started_at: float
+    pid: int
+
+
+@dataclass(frozen=True)
+class Cursor:
+    """How far into a capture a reader has already been taken.
+
+    Bytes and lines both, because they answer different questions and neither
+    can be worked out from the other without reading the file again: bytes say
+    where to start reading, lines say what number the next line has.
+    """
+
+    bytes: int = 0
+    lines: int = 0
+
+
 def raw_path(handle: str) -> Path:
     return captures_dir() / handle / "raw"
 
 
 def meta_path(handle: str) -> Path:
     return captures_dir() / handle / "meta.json"
+
+
+def running_path(handle: str) -> Path:
+    return captures_dir() / handle / "running.json"
+
+
+def cursor_path(handle: str) -> Path:
+    return captures_dir() / handle / "read.json"
 
 
 def begin(handle: str) -> Path:
@@ -106,6 +154,79 @@ def finish(meta: Meta) -> None:
     meta_path(meta.handle).write_text(
         json.dumps(asdict(meta), ensure_ascii=False, indent=2), encoding="utf-8"
     )
+
+
+def mark_running(started: Running) -> None:
+    """Record that a command was started and nobody is waiting for it."""
+    running_path(started.handle).write_text(
+        json.dumps(asdict(started), ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+
+
+def load_running(handle: str) -> Running | None:
+    """What was started under this handle, or None if nothing was left going.
+
+    A capture that has finished is not running whatever the file says: the
+    marker is removed at the end, but a process killed hard enough never gets to
+    remove it, and `meta.json` is the older and more trustworthy of the two.
+    """
+    if meta_path(handle).is_file():
+        return None
+    p = running_path(handle)
+    if not p.is_file():
+        return None
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    fields = set(Running.__dataclass_fields__)
+    try:
+        return Running(**{k: v for k, v in data.items() if k in fields})
+    except TypeError:
+        return None
+
+
+def clear_running(handle: str) -> None:
+    """Forget the marker, whether or not it was there."""
+    with contextlib.suppress(OSError):
+        running_path(handle).unlink()
+
+
+def started() -> list[Running]:
+    """Every command left going, newest first."""
+    d = captures_dir()
+    if not d.is_dir():
+        return []
+    found = [load_running(p.name) for p in d.iterdir() if p.is_dir()]
+    alive = [r for r in found if r is not None]
+    alive.sort(key=lambda r: r.started_at, reverse=True)
+    return alive
+
+
+def load_cursor(handle: str) -> Cursor:
+    """How much of this capture a reader has already been handed.
+
+    Nothing read is the honest answer for a capture nobody has looked at and for
+    one whose cursor cannot be read, so both come back the same: a reader shown
+    a line twice has lost nothing but patience, and one shown nothing has lost
+    the output.
+    """
+    p = cursor_path(handle)
+    if not p.is_file():
+        return Cursor()
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+        return Cursor(bytes=int(data["bytes"]), lines=int(data["lines"]))
+    except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError):
+        return Cursor()
+
+
+def save_cursor(handle: str, cursor: Cursor) -> None:
+    """Move the cursor, and never let moving it cost the caller their output."""
+    with contextlib.suppress(OSError):
+        cursor_path(handle).write_text(
+            json.dumps(asdict(cursor), ensure_ascii=False, indent=2), encoding="utf-8"
+        )
 
 
 def load(handle: str) -> Meta | None:

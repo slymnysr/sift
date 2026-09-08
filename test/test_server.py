@@ -36,7 +36,7 @@ MARKER = re.compile(r"^─ ([\d,]+) lines? not shown · sift peek (\S+) for any 
 
 OFFLINE = ("SIFT_API_KEY", "NVIDIA_API_KEY", "SIFT_MODELS", "SIFT_BASE_URL")
 
-TOOLS = {"run", "outline", "peek"}
+TOOLS = {"run", "outline", "peek", "follow", "digest", "digest_many", "tool"}
 
 
 @pytest.fixture(autouse=True)
@@ -76,12 +76,18 @@ def _shown(answer: str) -> list[str]:
 # -- the contract ------------------------------------------------------------
 
 
-async def test_the_three_tools_are_the_three_commands():
-    """A fourth tool would be a fourth promise, and `sift list` is not one yet.
+async def test_every_tool_answers_about_a_run_the_caller_started():
+    """The line that decides what may be on offer, and it has not moved.
 
-    It would hand a model every command lately run on this machine, including
-    the ones it never asked for. That is a question about what leaves the
-    machine, so it waits for the phase that is about that.
+    `follow` joins the first three because it answers about one handle, and the
+    only way to have that handle is to have started that run through `run`. It
+    adds a promise about a command the caller already owns.
+
+    `list` and `stats` are still not here, and not because they are unfinished.
+    They would hand a model every command lately run on this machine, including
+    the ones it never asked about -- a question about what leaves the machine
+    rather than about what a caller is owed, so it waits for the phase that is
+    about that.
     """
     tools = await s.server.list_tools()
 
@@ -123,7 +129,9 @@ def test_the_note_names_the_model_when_there_was_one(counting, monkeypatch):
     monkeypatch.setattr(
         view,
         "distill",
-        lambda capture, bridge=None: view.View(capture.handle, "bir", 1, 9, "a-model", 1),
+        lambda capture, bridge=None, budget=None, keep=None: view.View(
+            capture.handle, "bir", 1, 9, "a-model", 1
+        ),
     )
     answer = s.run(counting)
 
@@ -157,7 +165,7 @@ def test_the_server_climbs_the_same_ladder_as_the_command_line(counting, monkeyp
     ladder, this test would pass while the real one rotted.
     """
 
-    def explode(capture, bridge=None):
+    def explode(capture, bridge=None, budget=None, keep=None):
         raise RuntimeError("damitici kirildi")
 
     monkeypatch.setattr(view, "distill", explode)

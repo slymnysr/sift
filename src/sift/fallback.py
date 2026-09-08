@@ -47,7 +47,9 @@ def ends(total: int, *, head: int = HEAD, tail: int = TAIL) -> set[int]:
     return set(range(1, head + 1)) | set(range(total - tail + 1, total + 1))
 
 
-def from_lines(lines: list[str], handle: str, *, tail: int = TAIL) -> View:
+def from_lines(
+    lines: list[str], handle: str, *, tail: int = TAIL, first: int = 1
+) -> View:
     """The ends of any numbered text, marked with what lies between them.
 
     A source file gets the same treatment as a capture, and for the same reason:
@@ -60,10 +62,13 @@ def from_lines(lines: list[str], handle: str, *, tail: int = TAIL) -> View:
     if not total:
         return View(handle, "", 0, 0, None, 0)
 
-    chosen = ends(total, head=HEAD, tail=tail)
+    # `ends` counts from one because it is arithmetic about a length, not about
+    # a capture. Where these lines sit in the run is the caller's business, and
+    # it is added here, once, rather than taught to the arithmetic.
+    chosen = {number + first - 1 for number in ends(total, head=HEAD, tail=tail)}
     return View(
         handle=handle,
-        text=render(lines, chosen, handle),
+        text=render(lines, chosen, handle, first),
         kept=len(chosen),
         total=total,
         model=None,

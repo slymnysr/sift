@@ -36,6 +36,8 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from sift.privacy import sending_on
+
 DEFAULT_BASE_URL = "https://integrate.api.nvidia.com/v1"
 
 DEFAULT_LADDER = (
@@ -146,6 +148,13 @@ class Bridge:
         model will reject it just as firmly, and asking again only spends the
         user's time to arrive at the same place.
         """
+        if not sending_on():
+            # Asked before the key, because the reason a caller is given should
+            # be the one they can act on: a switch they set is not a key they
+            # forgot.
+            self.last_error = "sending is switched off (SIFT_NO_MODEL)"
+            return None
+
         if not self.available:
             self.last_error = "no api key"
             return None

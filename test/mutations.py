@@ -24,6 +24,8 @@ that is where the things that check the code belong.
 
 from __future__ import annotations
 
+import contextlib
+import json
 import os
 import re
 import subprocess
@@ -33,6 +35,29 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / "src" / "sift"
+
+
+# Where a mutation is written down while it is applied. `finally` undoes every
+# mutation this process applies, and that is enough right up until the process
+# is not asked politely: a SIGKILL, a machine that reboots, a terminal that
+# takes its children with it. None of those run `finally`, and what is left
+# behind is a source file with a rule deliberately broken in it -- which the
+# next test run reports as a failure somewhere else entirely, or worse, does not
+# report at all.
+#
+# So the intent is written to disk before it is carried out. The next run finds
+# it and undoes it before doing anything else. It is one small file and it is
+# only ever present for the seconds a suite takes.
+JOURNAL = ROOT / "test" / ".mutating.json"
+
+# How the suite is told that the break it is about to run into is deliberate.
+#
+# `conftest.py` repairs a leftover mutation before every run, which is exactly
+# wrong for the one run that wants the mutation there. The note on disk cannot
+# tell those two apart -- it is identical in both -- so the difference is said
+# out of band, by the process that knows: this one, while it is still alive to
+# undo its own work.
+MUTATING = "SIFT_MUTATING"
 
 
 @dataclass(frozen=True)
@@ -189,26 +214,26 @@ MUTATIONS = [
     Mutation(
         "distill.py",
         "a number past the end of the capture is dropped, not merely unprintable",
-        "        end = min(end, total)",
+        "        end = min(end, first + total - 1)",
         "        end = end",
     ),
     Mutation(
         "distill.py",
         "there is no line before the first one",
-        "        start = max(start, 1)",
+        "        start = max(start, first)",
         "        start = start",
     ),
     Mutation(
         "distill.py",
         "every piece is numbered as part of the whole capture",
-        "    batches = _batches(list(enumerate(lines, 1)))",
+        "    batches = _batches(list(enumerate(lines, first)))",
         "    batches = _batches([(1, line) for line in lines])",
     ),
     Mutation(
         "distill.py",
-        "the first line of a capture is line one",
+        "the numbering starts where the caller said it starts",
+        "    batches = _batches(list(enumerate(lines, first)))",
         "    batches = _batches(list(enumerate(lines, 1)))",
-        "    batches = _batches(list(enumerate(lines, 0)))",
     ),
     Mutation(
         "distill.py",
@@ -219,7 +244,7 @@ MUTATIONS = [
     Mutation(
         "distill.py",
         "an answer with no numbers in it is no answer",
-        "    if not chosen:\n        return None\n",
+        "    if not chosen and not always:\n        return None\n",
         "    if False:\n        return None\n",
     ),
     Mutation(
@@ -231,7 +256,7 @@ MUTATIONS = [
     Mutation(
         "distill.py",
         "lines folded away after the last shown one are marked",
-        "    if previous_end < len(lines):",
+        "    if previous_end < last:",
         "    if False:",
     ),
     Mutation(
@@ -249,8 +274,8 @@ MUTATIONS = [
     Mutation(
         "distill.py",
         "the view is built from the capture and from nothing else",
-        "        text=render(lines, chosen, handle),",
-        "        text=render(lines, chosen, handle) + answer.text,",
+        "        text=render(lines, chosen, handle, first),",
+        "        text=render(lines, chosen, handle, first) + answer.text,",
     ),
     # -- Faz 4: the safety net -----------------------------------------------
     Mutation(
@@ -298,15 +323,19 @@ MUTATIONS = [
     Mutation(
         "view.py",
         "a bug in the distiller costs the view and nothing else",
+        '        reason = bridge.last_error or "no lines chosen"\n'
         "    except Exception as exc:  # a bug here must not cost the caller their output",
+        '        reason = bridge.last_error or "no lines chosen"\n'
         "    except ValueError as exc:  # a bug here must not cost the caller their output",
     ),
     Mutation(
         "cli.py",
         "a command that cannot be run is reported, not raised at the user",
+        "        capture = run(args, timeout=timeout, shell=shell, cwd=where)\n"
         "    except OSError as exc:\n"
         '        print(f"sift: {exc}", file=sys.stderr)\n'
         "        return CANNOT_RUN\n",
+        "        capture = run(args, timeout=timeout, shell=shell, cwd=where)\n"
         "    except ValueError as exc:\n"
         '        print(f"sift: {exc}", file=sys.stderr)\n'
         "        return CANNOT_RUN\n",
@@ -320,7 +349,9 @@ MUTATIONS = [
     Mutation(
         "cli.py",
         "when everything that chooses lines fails, every line is shown",
+        "        _show(capture, budget, keep)\n"
         "    except Exception as exc:  # the view is optional; the output is not",
+        "        _show(capture, budget, keep)\n"
         "    except ValueError as exc:  # the view is optional; the output is not",
     ),
     Mutation(
@@ -339,13 +370,13 @@ MUTATIONS = [
     Mutation(
         "lines.py",
         "a line ends at a newline and at nothing else",
-        "    found = text.split(\"\\n\")",
+        '    found = text.split("\\n")',
         "    found = text.splitlines()",
     ),
     Mutation(
         "lines.py",
         "a trailing newline ends the last line rather than starting another",
-        "    if found[-1] == \"\":\n",
+        '    if found[-1] == "":\n',
         "    if False:\n",
     ),
     Mutation(
@@ -370,17 +401,15 @@ MUTATIONS = [
     Mutation(
         "outline.py",
         "the outline is asked about the file and never about its name",
-        "    return select(read(path), QUESTION, str(path), bridge, budget=BUDGET)",
-        "    return select(\n"
-        "        [str(path), *read(path)], QUESTION, str(path), bridge, budget=BUDGET\n"
-        "    )",
+        "        read(path),\n        QUESTION,",
+        "        [str(path), *read(path)],\n        QUESTION,",
     ),
     Mutation(
         "distill.py",
         "the question put to the model is the one the caller asked",
-        "    batches = _batches(list(enumerate(lines, 1)))\n"
+        "    batches = _batches(list(enumerate(lines, first)))\n"
         "    asked = prompt(question, budget, len(batches))",
-        "    batches = _batches(list(enumerate(lines, 1)))\n"
+        "    batches = _batches(list(enumerate(lines, first)))\n"
         "    asked = prompt(QUESTION, budget, len(batches))",
     ),
     Mutation(
@@ -393,7 +422,9 @@ MUTATIONS = [
     Mutation(
         "cli.py",
         "a file that cannot be read is reported, not raised at the user",
+        "        view, who = best_outline(path, budget, keep)\n"
         "    except OSError as exc:  # the file itself cannot be read; there is no view",
+        "        view, who = best_outline(path, budget, keep)\n"
         "    except ValueError as exc:  # the file itself cannot be read; there is no view",
     ),
     Mutation(
@@ -418,14 +449,16 @@ MUTATIONS = [
     Mutation(
         "server.py",
         "a command line written by a client is a command line, pipes and all",
-        "        capture = run_command([command], shell=True, timeout=timeout)",
-        "        capture = run_command([command], shell=False, timeout=timeout)",
+        "        capture = run_command([command], shell=True, timeout=timeout, cwd=cwd)",
+        "        capture = run_command([command], shell=False, timeout=timeout, cwd=cwd)",
     ),
     Mutation(
         "server.py",
         "a file that cannot be read comes back as a sentence, not as a stack",
+        "        view, who = best_outline(path, budget, keep)\n"
         "    except OSError as exc:  # the file cannot be read; there is no view to give\n"
         '        return f"sift: {exc}"\n',
+        "        view, who = best_outline(path, budget, keep)\n"
         "    except OSError:  # the file cannot be read; there is no view to give\n"
         "        raise\n",
     ),
@@ -434,10 +467,8 @@ MUTATIONS = [
         "a command that cannot even be started comes back as a sentence too",
         "    except OSError as exc:\n"
         '        return f"sift: {exc}"\n'
-        "    view, who = best_view(capture)\n",
-        "    except OSError:\n"
-        "        raise\n"
-        "    view, who = best_view(capture)\n",
+        "    view, who = best_view(capture, BUDGET if budget is None else budget, keep)\n",
+        "    except OSError:\n        raise\n    view, who = best_view(capture)\n",
     ),
     Mutation(
         "server.py",
@@ -479,7 +510,7 @@ MUTATIONS = [
     Mutation(
         "distill.py",
         "the second pass is shown the lines it chose, with the numbers they had",
-        "        shortlist = [(number, lines[number - 1]) for number in sorted(chosen)]",
+        "        shortlist = [(number, lines[number - first]) for number in sorted(chosen)]",
         "        shortlist = list(enumerate(sorted(lines[n - 1] for n in chosen), 1))",
     ),
     Mutation(
@@ -491,8 +522,8 @@ MUTATIONS = [
     Mutation(
         "distill.py",
         "narrowing can drop a line and can never add one",
-        "                kept |= read_numbers(answer.text, len(lines)) & chosen",
-        "                kept |= read_numbers(answer.text, len(lines))",
+        "                kept |= read_numbers(answer.text, len(lines), first) & chosen",
+        "                kept |= read_numbers(answer.text, len(lines), first)",
     ),
     Mutation(
         "distill.py",
@@ -515,14 +546,14 @@ MUTATIONS = [
     Mutation(
         "outline.py",
         "an outline is given the budget this module states, not the one distilling uses",
-        "    return select(read(path), QUESTION, str(path), bridge, budget=BUDGET)",
-        "    return select(read(path), QUESTION, str(path), bridge, budget=None)",
+        "        budget=BUDGET if budget is None else budget,",
+        "        budget=budget,",
     ),
     Mutation(
         "view.py",
         "the bill is for the view, against what the capture would have cost",
         "            raw_bytes=capture.meta.byte_count,",
-        "            raw_bytes=len(view.text.encode(\"utf-8\")),",
+        '            raw_bytes=len(view.text.encode("utf-8")),',
     ),
     Mutation(
         "view.py",
@@ -533,8 +564,8 @@ MUTATIONS = [
     Mutation(
         "store.py",
         "bookkeeping that cannot be written costs the report and nothing else",
-        "    with contextlib.suppress(OSError):",
-        "    if True:",
+        "    with contextlib.suppress(OSError):\n        view_path(saving.handle).write_text(",
+        "    if True:\n        view_path(saving.handle).write_text(",
     ),
     Mutation(
         "store.py",
@@ -569,8 +600,8 @@ MUTATIONS = [
     Mutation(
         "distill.py",
         "how many at once never falls below one",
-        'return max(1, int(written)) if written.isdigit() else WORKERS',
-        'return int(written) if written.isdigit() else WORKERS',
+        "return max(1, int(written)) if written.isdigit() else WORKERS",
+        "return int(written) if written.isdigit() else WORKERS",
     ),
     Mutation(
         "distill.py",
@@ -593,8 +624,8 @@ MUTATIONS = [
     Mutation(
         "view.py",
         "silence is only reported when there was some",
-        "    if not view.unanswered:\n        return \"\"",
-        "    if True:\n        return \"\"",
+        '    if not view.unanswered:\n        return ""',
+        '    if True:\n        return ""',
     ),
     Mutation(
         "view.py",
@@ -627,6 +658,399 @@ MUTATIONS = [
         "        return list(default.missed), []",
         "        return [], []",
     ),
+    # -- Faz 9: a command left running ---------------------------------------
+    Mutation(
+        "background.py",
+        "a pid this tool did not start is never signalled",
+        "    if running.pid <= 1:\n        return False",
+        "    if False:\n        return False",
+    ),
+    # The same rule, kept a second time and one layer down. Neither of these two
+    # may be the only thing standing between a stale marker and `kill(-1)`, so
+    # the battery breaks them separately: with either one gone the other still
+    # holds, and what is caught is a test failing rather than the machine going
+    # quiet. That property is the point, and it is only true if both are tested.
+    Mutation(
+        "background.py",
+        "signalling refuses a pid that is a broadcast rather than a tree",
+        "    if pid <= 1:\n        return\n",
+        "    if False:\n        return\n",
+    ),
+    Mutation(
+        "background.py",
+        "signalling refuses a process group that is a broadcast",
+        "            if group > 1:",
+        "            if True:",
+    ),
+    Mutation(
+        "background.py",
+        "our supervisor leads its own session; a reused pid does not",
+        "        return os.getpgid(running.pid) == running.pid",
+        "        return True",
+    ),
+    Mutation(
+        "background.py",
+        "a supervisor that has exited is not still watching",
+        "    if _unreaped(running.pid):\n        return False",
+        "    if False:\n        return False",
+    ),
+    Mutation(
+        "background.py",
+        "a slice ends at the last newline that arrived",
+        '    cut = fresh.rfind(b"\\n")',
+        "    cut = len(fresh) - 1",
+    ),
+    Mutation(
+        "background.py",
+        "the numbering carries on from where the reader stopped",
+        "    first = cursor.lines + 1",
+        "    first = 1",
+    ),
+    Mutation(
+        "background.py",
+        "a reader is never handed the same line twice",
+        "            source.seek(cursor.bytes)",
+        "            source.seek(0)",
+    ),
+    Mutation(
+        "background.py",
+        "a run nobody could signal is closed rather than left open",
+        "    return _close(running, sent)",
+        "    return None",
+    ),
+    Mutation(
+        "background.py",
+        "a run that had already finished keeps the ending it had",
+        "    if running is None:\n        return store.load(handle)",
+        "    if running is None:\n        return None",
+    ),
+    Mutation(
+        "background.py",
+        "a launched run has a capture from the moment it has a handle",
+        "    store.begin(handle).touch(exist_ok=True)",
+        "    store.begin(handle)",
+    ),
+    Mutation(
+        "watch.py",
+        "the ending is written before the marker comes down",
+        "    target = store.raw_path(handle)\n    store.finish(",
+        "    target = store.raw_path(handle)\n"
+        "    store.clear_running(handle)\n    store.finish(",
+    ),
+    Mutation(
+        "watch.py",
+        "a command that could not start is recorded, not left running",
+        "        _record(handle, command, shell, cwd, started_at, _CANNOT_START)\n"
+        "        return _CANNOT_START",
+        "        return _CANNOT_START",
+    ),
+    Mutation(
+        "watch.py",
+        "the supervisor adds to a capture rather than starting it over",
+        'open(target, "ab")',
+        'open(target, "wb")',
+    ),
+    Mutation(
+        "view.py",
+        "nothing new is an answer, and it costs nothing to give",
+        '    if not lines:\n        return View(handle, "", 0, 0, None, 0), "nothing new"',
+        '    if False:\n        return View(handle, "", 0, 0, None, 0), "nothing new"',
+    ),
+    Mutation(
+        "view.py",
+        "lines a model read and chose none of are folded, not replaced",
+        "        if bridge.last_error is None:",
+        "        if False:",
+    ),
+    Mutation(
+        "view.py",
+        "a supervisor that is gone is called lost, not running",
+        '        return "running" if alive(running) else "lost"',
+        '        return "running"',
+    ),
+    Mutation(
+        "view.py",
+        "a follow reports the numbers the capture uses",
+        "    last = first + view.total - 1",
+        "    last = view.total",
+    ),
+    Mutation(
+        "fallback.py",
+        "the ends of a slice are numbered where the slice sits",
+        "    chosen = {number + first - 1 for number in ends(total, head=HEAD, tail=tail)}",
+        "    chosen = ends(total, head=HEAD, tail=tail)",
+    ),
+    Mutation(
+        "cli.py",
+        "a background run refuses a timeout rather than dropping it",
+        "    if timeout is not None:\n        print(\n"
+        '            "sift: --background and --timeout do not go together: nothing is waiting"',
+        "    if False:\n        print(\n"
+        '            "sift: --background and --timeout do not go together: nothing is waiting"',
+    ),
+    Mutation(
+        "cli.py",
+        "what is still running is listed",
+        "    for running in store.started():",
+        "    for running in []:",
+    ),
+    # -- Faz 10: what leaves the machine --------------------------------------
+    Mutation(
+        "privacy.py",
+        "a credential is replaced before the question is sent",
+        "    if not masking_on():\n        return text",
+        "    if True:\n        return text",
+    ),
+    Mutation(
+        "privacy.py",
+        "masking is on unless it is switched off",
+        'return (os.environ.get("SIFT_MASK") or "1").strip().lower() not in _NO',
+        'return (os.environ.get("SIFT_MASK") or "0").strip().lower() not in _NO',
+    ),
+    Mutation(
+        "privacy.py",
+        "a switch that says do not send is obeyed",
+        'return (os.environ.get("SIFT_NO_MODEL") or "").strip().lower() in _NO',
+        "return True",
+    ),
+    Mutation(
+        "privacy.py",
+        "the surrounding text survives so the reader can see what was hidden",
+        "    return whole[:cut] + REDACTED + whole[cut + len(value) :]",
+        "    return REDACTED",
+    ),
+    Mutation(
+        "distill.py",
+        "the text a model is shown is masked",
+        "        safe = mask(line)",
+        "        safe = line",
+    ),
+    Mutation(
+        "distill.py",
+        "a secret is masked before the line is shortened",
+        "        safe = mask(line)\n"
+        '        shown = safe if len(safe) <= cap else safe[:cap] + " …"',
+        '        cut = line if len(line) <= cap else line[:cap] + " …"\n'
+        "        shown = mask(cut)",
+    ),
+    Mutation(
+        "model.py",
+        "nothing is sent when sending is switched off",
+        "        if not sending_on():",
+        "        if False:",
+    ),
+    # -- Faz 11: the release ---------------------------------------------------
+    Mutation(
+        ".github/workflows/release.yml",
+        "publishing happens on a tag and nowhere else",
+        '    tags: ["v*"]',
+        "    branches: [main]",
+    ),
+    Mutation(
+        "__init__.py",
+        "the published version is the one the package reports",
+        '__version__ = "1.0.0"',
+        '__version__ = "0.9.0"',
+    ),
+    # -- Faz 12: the caller's own say ------------------------------------------
+    Mutation(
+        "distill.py",
+        "a line the caller asked for is shown",
+        "    chosen |= always",
+        "    chosen |= set()",
+    ),
+    Mutation(
+        "distill.py",
+        "a pattern that matched is an answer even when nobody replied",
+        "    if not chosen and not always:",
+        "    if not chosen:",
+    ),
+    Mutation(
+        "distill.py",
+        "a pattern that will not compile is searched for as text",
+        "        return {n for n, line in enumerate(lines, first) if keep in line}",
+        "        return set()",
+    ),
+    Mutation(
+        "distill.py",
+        "a kept pattern is looked for anywhere in the line",
+        "    return {n for n, line in enumerate(lines, first) if found.search(line)}",
+        "    return {n for n, line in enumerate(lines, first) if found.fullmatch(line)}",
+    ),
+    Mutation(
+        "cli.py",
+        "the pattern the caller typed is the pattern that is used",
+        '        elif args[0] == "--keep" and len(args) > 1:\n            keep = args[1]',
+        '        elif args[0] == "--keep" and len(args) > 1:\n            keep = None',
+    ),
+    Mutation(
+        "cli.py",
+        "a command runs where the caller said",
+        '        elif args[0] == "--cwd" and len(args) > 1:\n            where = args[1]',
+        '        elif args[0] == "--cwd" and len(args) > 1:\n            where = None',
+    ),
+    # -- Faz 13: a file somebody else produced ---------------------------------
+    Mutation(
+        "digest.py",
+        "a digest asks what happened, not what is declared",
+        "        QUESTION,",
+        '        "",',
+    ),
+    Mutation(
+        "digest.py",
+        "a digest is handled by its path, so peek takes it back",
+        "        str(path),\n        bridge,",
+        '        "",\n        bridge,',
+    ),
+    Mutation(
+        "view.py",
+        "a bug in the digester costs the view and nothing else",
+        "    except Exception as exc:  # a bug here must not cost the caller their file",
+        "    except ValueError as exc:  # a bug here must not cost the caller their file",
+    ),
+    # -- Faz 14: the way into a gap --------------------------------------------
+    Mutation(
+        "peek.py",
+        "a search shows the lines around what it matched",
+        "        nearby = set(range(max(first, hit - around), min(last, hit + around) + 1))",
+        "        nearby = {hit}",
+    ),
+    Mutation(
+        "peek.py",
+        "a search that finds nothing returns nothing",
+        "    if not chosen:\n"
+        '        return Peek(handle, "", first, first, total, len(raw), matched=0)',
+        "    if False:\n"
+        '        return Peek(handle, "", first, first, total, len(raw), matched=0)',
+    ),
+    Mutation(
+        "peek.py",
+        "a pattern that will not compile is searched for as text",
+        "        return [n for n in range(first, last + 1) if grep in lines[n - 1]]",
+        "        return []",
+    ),
+    Mutation(
+        "peek.py",
+        "a search is capped, so a pattern matching everything cannot answer with everything",
+        "        if len(chosen | nearby) > cap and chosen:\n            break",
+        "        if False:\n            break",
+    ),
+    Mutation(
+        "view.py",
+        "a search says how many lines matched, not only how many it shows",
+        '    return f"{where} · {found.matched:,} {line} matched"',
+        "    return where",
+    ),
+    # -- Faz 15: several at once -----------------------------------------------
+    Mutation(
+        "distill.py",
+        "every ask passes through the one ceiling",
+        "    gate.acquire()",
+        "    pass",
+    ),
+    Mutation(
+        "many.py",
+        "answers come back in the order the questions were asked",
+        "        return list(pool.map(lambda job: job(), jobs))",
+        "        return list(reversed(list(pool.map(lambda job: job(), jobs))))",
+    ),
+    Mutation(
+        "background.py",
+        "waiting ends as soon as something is said",
+        "        if unread(handle)[0]:\n            return True",
+        "        if False:\n            return True",
+    ),
+    Mutation(
+        "background.py",
+        "a run that has already finished is not waited for",
+        "        if running is None or not alive(running):\n            return False",
+        "        if False:\n            return False",
+    ),
+    Mutation(
+        "view.py",
+        "one unreadable file does not take the others with it",
+        "            except OSError as exc:\n"
+        '                return path, View(path, "", 0, 0, None, 0), f"unreadable ({exc})"',
+        "            except OSError:\n                raise",
+    ),
+    Mutation(
+        "cli.py",
+        "following everything answers about every run",
+        "    for one in running:\n        _follow([one.handle])",
+        "    for one in running[:1]:\n        _follow([one.handle])",
+    ),
+    # -- Faz 16: what this machine already knows -------------------------------
+    Mutation(
+        "memory.py",
+        "a command that has failed every time it was run here is named",
+        "        return self.runs > 0 and self.failures == self.runs",
+        "        return False",
+    ),
+    Mutation(
+        "memory.py",
+        "a memory narrows to what was asked about",
+        "        if term and term not in written:\n            continue",
+        "        if False:\n            continue",
+    ),
+    Mutation(
+        "memory.py",
+        "runs of the same command are counted together",
+        "        seen.setdefault(written, []).append(meta)",
+        "        seen[written] = [meta]",
+    ),
+    Mutation(
+        "cli.py",
+        "a memory with nothing in it says so rather than printing nothing",
+        '        print(f"sift: nothing{where} matches that, out of '
+        '{seen:,} runs still on disk.")',
+        "        pass",
+    ),
+    # -- Faz 17: tools that answer without opening the file --------------------
+    Mutation(
+        "tools.py",
+        "whether a tool is here is asked of the machine, not assumed",
+        "        return shutil.which(self.binary) is not None",
+        "        return True",
+    ),
+    Mutation(
+        "tools.py",
+        "a name that is not one of them is refused",
+        "    if known is None:\n        return None",
+        "    if False:\n        return None",
+    ),
+    Mutation(
+        "cli.py",
+        "a tool this machine does not have says what it is called",
+        "    if not known.here:\n        print(",
+        "    if False:\n        print(",
+    ),
+    # -- Faz 18: the shell commands a client runs on its own -------------------
+    Mutation(
+        "hook.py",
+        "everything is routed; nothing decides what looks noisy",
+        '    if event.get("tool_name") != "Bash":\n        return PASS',
+        "    if True:\n        return PASS",
+    ),
+    Mutation(
+        "hook.py",
+        "a bug underneath leaves the shell exactly as it was",
+        "    except Exception:  # a bug here must not cost the caller their shell\n"
+        "        return PASS",
+        "    except ValueError:  # a bug here must not cost the caller their shell\n"
+        "        return PASS",
+    ),
+    Mutation(
+        "hook.py",
+        "an event of a shape nobody expected is carried on from",
+        "    if not isinstance(command, str) or not command.strip():\n        return PASS",
+        "    if False:\n        return PASS",
+    ),
+    Mutation(
+        "hook.py",
+        "the gate can be switched off",
+        "    if not wanted():\n        return PASS",
+        "    if False:\n        return PASS",
+    ),
 ]
 
 
@@ -634,6 +1058,7 @@ def _run_suite() -> tuple[int, str]:
     """The suite, with the live call switched off so the network cannot decide this."""
     env = dict(os.environ)
     env.pop("SIFT_LIVE", None)
+    env[MUTATING] = "1"  # the break below is on purpose; do not repair it
     finished = subprocess.run(
         [sys.executable, "-m", "pytest", "--no-header", "-p", "no:cacheprovider", "-x"],
         cwd=ROOT,
@@ -651,20 +1076,132 @@ def _run_suite() -> tuple[int, str]:
     return finished.returncode, tail
 
 
+def note(mutation: Mutation, original: str, mutated: str) -> None:
+    """Say what is about to be broken, before breaking it.
+
+    Both whole texts are written down, not the two lines that differ. The reason
+    is in `undo_leftover`, and it was learned by watching the first version of
+    this fail.
+    """
+    JOURNAL.write_text(
+        json.dumps(
+            {
+                "file": mutation.file,
+                "rule": mutation.rule,
+                "original": original,
+                "mutated": mutated,
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+
+def forget() -> None:
+    """The mutation is undone; the note about it is no longer true."""
+    with contextlib.suppress(OSError):
+        JOURNAL.unlink()
+
+
+def undo_leftover() -> str | None:
+    """Undo a mutation an earlier run was killed in the middle of.
+
+    The file is compared whole, byte for byte, against the text this battery
+    wrote. Nothing is searched for.
+
+    The first version of this did search: it looked for the mutated string and
+    refused to act unless it appeared exactly once. The very first mutation in
+    this file turns a line into `proc.kill()` -- which `capture.py` already
+    contained twice, in the two branches around it. So the count was three, the
+    guard said no, the note was cleared, and the break stayed on disk. A recovery
+    that quietly declines is worse than none, because it also destroys the record
+    that would have let anyone else notice.
+
+    Comparing whole texts cannot pick the wrong occurrence, and cannot fire on a
+    file somebody has edited since: if it does not match what was written, this
+    is not the situation it was left here for, and it does nothing.
+    """
+    try:
+        left = json.loads(JOURNAL.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    where = ROOT / left["file"] if "/" in left["file"] else SOURCE / left["file"]
+    try:
+        now = where.read_text(encoding="utf-8")
+    except OSError:
+        forget()
+        return None
+
+    if now == left["mutated"]:
+        where.write_text(left["original"], encoding="utf-8")
+        forget()
+        return f"{left['file']}: {left['rule']}"
+
+    forget()
+    return None
+
+
+def _slice_from(given: list[str]) -> tuple[list[str], int, int | None]:
+    """Pull `--from N` and `--to M` out of the arguments, leaving the words.
+
+    A range exists because a full battery takes the better part of an hour, and
+    an hour is longer than some machines will leave a process alone. Splitting it
+    into runs that each finish is the difference between a proof that gets made
+    and one that keeps being interrupted at ninety per cent.
+    """
+    start, stop = 0, None
+    rest: list[str] = []
+    n = 0
+    while n < len(given):
+        word = given[n]
+        if word in ("--from", "--to") and n + 1 < len(given):
+            try:
+                number = int(given[n + 1])
+            except ValueError:
+                rest.append(word)
+                n += 1
+                continue
+            if word == "--from":
+                start = number
+            else:
+                stop = number
+            n += 2
+            continue
+        rest.append(word)
+        n += 1
+    return rest, start, stop
+
+
 def main(argv: list[str] | None = None) -> int:
     """Every mutation, or only the ones whose rule contains the given words.
 
-        python test/mutations.py                 # all of them
-        python test/mutations.py numbering       # while fixing one escape
+        python test/mutations.py                     # all of them
+        python test/mutations.py numbering           # while fixing one escape
+        python test/mutations.py --from 0 --to 20    # one slice of the whole
 
-    The filter is for the minutes between finding an escape and fixing it. A
-    filtered run is not a passing battery, and it says so at the end.
+    The filter is for the minutes between finding an escape and fixing it. The
+    range is for machines that will not leave an hour-long process alone. A run
+    that was filtered or sliced is not a passing battery, and it says so at the
+    end.
     """
-    words = " ".join(argv if argv is not None else sys.argv[1:]).strip().lower()
+    given = list(argv if argv is not None else sys.argv[1:])
+    given, start, stop = _slice_from(given)
+    words = " ".join(given).strip().lower()
     chosen = [m for m in MUTATIONS if words in m.rule.lower()]
     if not chosen:
         print(f"No mutation mentions {words!r}.")
         return 2
+
+    whole = len(chosen)
+    chosen = chosen[start:stop]
+    if not chosen:
+        print(f"No mutation in that range (there are {whole}).")
+        return 2
+
+    undone = undo_leftover()
+    if undone:
+        print(f"undone, left behind by a run that was killed -- {undone}\n")
 
     code, tail = _run_suite()
     if code != 0:
@@ -681,13 +1218,14 @@ def main(argv: list[str] | None = None) -> int:
             print(f"NO ANCHOR  {mutation.rule}  ({found} matches in {mutation.file})")
             escaped.append(mutation)
             continue
+        mutated = original.replace(mutation.before, mutation.after, 1)
+        note(mutation, original, mutated)
         try:
-            mutation.path.write_text(
-                original.replace(mutation.before, mutation.after, 1), encoding="utf-8"
-            )
+            mutation.path.write_text(mutated, encoding="utf-8")
             code, tail = _run_suite()
         finally:
             mutation.path.write_text(original, encoding="utf-8")
+            forget()
         if code == 0:
             print(f"ESCAPED    {mutation.rule}  ({tail})")
             escaped.append(mutation)
@@ -697,6 +1235,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"\n{len(chosen) - len(escaped)}/{len(chosen)} caught")
     if words:
         print(f"(only the {len(chosen)} mutations mentioning {words!r} were run)")
+    if (start, stop) != (0, None):
+        print(f"(only {start}..{stop if stop is not None else whole} of {whole} were run)")
     if escaped:
         print("An escaped mutation means that rule is unguarded, not that it is unimportant.")
     return 1 if escaped else 0

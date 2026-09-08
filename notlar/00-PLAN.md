@@ -50,9 +50,41 @@ sonraki faza geçilmez.
 | 6 | Dosya taslağı | herhangi dilde bildirim çıkarımı (regex ailesi YOK) | bitti — [06-DOSYA-TASLAGI.md](06-DOSYA-TASLAGI.md) |
 | 7 | MCP sunucusu | araçlar, kayıt, istemciye bağlanma | bitti — [07-MCP-SUNUCUSU.md](07-MCP-SUNUCUSU.md) |
 | 8 | Bütçe ve ölçüm | pencereler arası bütçe, kazanç raporu, korpus kıyası | bitti — [08-BUTCE-VE-OLCUM.md](08-BUTCE-VE-OLCUM.md) |
-| 9 | Arka plan komutları | bitmeyen komutlar: başlat, yalnız yeniyi oku, durdur |
-| 10 | Gizlilik | sır maskeleme, opt-out, ham veri yerelde |
-| 11 | Yayın | README, lisans, CI, PyPI |
+| 9 | Arka plan komutları | bitmeyen komutlar: başlat, yalnız yeniyi oku, durdur | bitti — [09-ARKA-PLAN-KOMUTLARI.md](09-ARKA-PLAN-KOMUTLARI.md) |
+| 10 | Gizlilik | sır maskeleme, opt-out, ham veri yerelde | bitti — [10-GIZLILIK.md](10-GIZLILIK.md) |
+| 11 | Yayın | README, lisans, CI, PyPI | bitti — [11-YAYIN.md](11-YAYIN.md) |
+| 12 | Çağıranın söz hakkı | `budget`, `keep` (mutlaka göster), `cwd` | bitti — [12-CAGIRANIN-SOZ-HAKKI.md](12-CAGIRANIN-SOZ-HAKKI.md) |
+| 13 | Dosya damıtma | `digest`: var olan büyük bir dosyayı damıt | bitti — [13-DOSYA-DAMITMA.md](13-DOSYA-DAMITMA.md) |
+| 14 | Arayan `peek` | desenle ara, eşleşme etrafında bağlam | bitti — [14-ARAYAN-PEEK.md](14-ARAYAN-PEEK.md) |
+| 15 | Çoklu iş | bekleyen `follow`, tek çağrıda çok hedef, hepsini birden izle | bitti — [15-COKLU-IS.md](15-COKLU-IS.md) |
+| 16 | Hafıza | bu dizinde ne çalıştı, nasıl gitti, hangi hata tekrar ediyor | bitti — [16-HAFIZA.md](16-HAFIZA.md) |
+| 17 | Yoğun araçlar | `sg` / `diff` / `loc` çalıştır, çıktısını damıt | bitti — [17-YOGUN-ARACLAR.md](17-YOGUN-ARACLAR.md) |
+| 18 | Kapsam | hook: istemcinin kendi kabuk çağrıları buraya gelsin | bitti — [18-KAPSAM.md](18-KAPSAM.md) |
+
+## Ek fazlar — neden sonradan çıktılar
+
+11 faz kapandıktan sonra eski proje (winnow) ile **özellik bazında** karşılaştırma
+yapıldı ve sift'in kullanıcıya daha az yardım ettiği ortaya çıktı. Sebep mimari
+bir tercih değildi: planı yazarken eski projenin araç listesi karşıya alınıp tek
+tek işaretlenmedi. Hedef "var olan özellikleri **tümüyle** güncelle" diyordu;
+ölçüt olarak envanter değil, tasarım ilkesi kullanıldı.
+
+Bu bölümdeki yedi faz o boşluğun kapatılmasıdır. Ders, `notlar/12-*.md` içinde:
+**bir yeniden yazımın ölçütü ilke değil envanterdir.**
+
+Eklenmeyecek olan da kayda geçiyor: **vekil (proxy).** winnow'daki `proxy.py`
+tüm konuşmayı API'ye giderken damıtıyor. Bu, komutun çıktığı yerde durmakla aynı
+şey değil — ayrı bir üründür, ayrı bir güven modeli ister ve sift'in "yalnız
+kendi çalıştırdığını görür" duruşunu bozar. Kapsam genişletmesi 18. fazda
+**hook** ile yapılıyor: istemcinin kendi kabuk çağrısı buraya yönlendirilir,
+komutu yine sift çalıştırır, ve hiçbir şey araya girmez.
+
+### Fazların ortak kuralı
+
+Yedisi de aynı çıtaya tabi: **yargı modelde, garanti kodda.** Yeni bir özellik
+kodda "şu satır önemlidir" diyen bir kural getiriyorsa yanlış tasarlanmıştır.
+`keep` bunun sınır örneği ve tam da bu yüzden 12. fazda: desen **çağırandan**
+gelir, araç onu icat etmez — biri istektir, diğeri sezgisel tahmin.
 
 ## Kapsam kararları
 

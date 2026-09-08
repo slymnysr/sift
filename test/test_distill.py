@@ -30,6 +30,13 @@ def _python(code: str):
     return run([sys.executable, "-c", code])
 
 
+def text_lines_of(capture):
+    """The lines of a capture, the way `distill` counts them."""
+    from sift import lines as text_lines
+
+    return text_lines.of(capture.text())
+
+
 def _lines(count: int):
     return _python(f"for n in range(1, {count + 1}): print(f'satir {{n}}')")
 
@@ -532,3 +539,72 @@ def test_a_caller_may_ask_for_no_ceiling_at_all():
     assert view.kept == 400
     assert view.asks == 1
     assert judge.seen[0][0] == d.QUESTION + d.ANSWER_FORMAT
+
+# -- Faz 12: the caller's own say --------------------------------------------
+
+
+def test_a_line_the_caller_asked_for_is_shown_though_the_model_passed_it_over():
+    """`keep` is the one pattern in the judging path, and it is not this tool's.
+
+    A rule invented here about what output looks like would be a guess about
+    languages it half knows. A pattern the caller typed is a request: they know
+    what they are looking for, and the only job left is to not lose it.
+    """
+    judge = _Judge("1")
+    got = _python("print('bir'); print('KEYWORD'); print('uc')")
+
+    view = d.select(text_lines_of(got), "soru", got.handle, judge, keep="KEYWORD")
+
+    assert "KEYWORD" in view.text
+    assert "bir" in view.text  # what the model chose is still there
+
+
+def test_what_the_caller_asked_for_survives_the_budget():
+    """A ceiling is this tool's opinion; `keep` is an instruction.
+
+    An instruction that a default silently overrode would be worse than no
+    instruction at all, so the keeping happens after the narrowing rather than
+    inside it.
+    """
+    judge = _Judge("1")
+    got = _python("for n in range(6): print('TUT' if n % 2 else f'satir {n}')")
+
+    view = d.select(text_lines_of(got), "soru", got.handle, judge, budget=1, keep="TUT")
+
+    assert view.text.count("TUT") == 3
+    assert view.kept > 1, "the budget was allowed to eat the request"
+
+
+def test_a_pattern_that_matched_is_an_answer_even_when_nobody_replied():
+    judge = _Judge(None)
+    got = _python("print('bir'); print('TUT')")
+
+    view = d.select(text_lines_of(got), "soru", got.handle, judge, keep="TUT")
+
+    assert view is not None
+    assert "TUT" in view.text
+    assert view.model is None, "no model answered, and the view must not claim one"
+
+
+def test_a_pattern_that_will_not_compile_is_searched_for_as_text():
+    """Someone who typed `main()` meant those characters.
+
+    Answering a mistyped group with silence would drop the request without ever
+    saying so, which is the one outcome a caller cannot detect.
+    """
+    judge = _Judge("")
+    got = _python("print('void main() {')")
+
+    view = d.select(text_lines_of(got), "soru", got.handle, judge, keep="main()")
+
+    assert "main()" in view.text
+
+
+def test_keeping_a_line_does_not_move_any_number():
+    judge = _Judge("2")
+    got = _python("print('bir'); print('iki'); print('TUT')")
+
+    view = d.select(text_lines_of(got), "soru", got.handle, judge, keep="TUT")
+
+    assert _shown(view) == ["iki", "TUT"], "the order or the choice moved"
+    assert view.total == 3
