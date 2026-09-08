@@ -326,7 +326,8 @@ def test_the_ending_is_written_before_the_marker_comes_down(monkeypatch):
 
 def test_the_supervisor_adds_to_a_capture_rather_than_starting_it_over():
     _write("aaaa1111", "onceki\n")
-    watch.watch("aaaa1111", [sys.executable, "-c", "print('sonraki')"], started_at=store.now())
+    yazar = f"import sys; sys.stdout.buffer.write({b'sonraki\n'!r})"
+    watch.watch("aaaa1111", [sys.executable, "-c", yazar], started_at=store.now())
     assert store.read_raw("aaaa1111") == b"onceki\nsonraki\n"
 
 
@@ -516,6 +517,7 @@ def test_a_marker_naming_pid_one_is_closed_and_never_signalled():
     assert store.load_running("aaaa1111") is None
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="killpg yok, yayin da yok")
 def test_signalling_refuses_a_broadcast_whatever_asked_for_it(monkeypatch):
     """The second guard, tested apart from the first, because that is its job.
 

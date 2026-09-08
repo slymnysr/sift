@@ -45,7 +45,7 @@ def _writes(payload: bytes) -> list[str]:
 
 
 def test_what_the_command_wrote_comes_back_byte_for_byte():
-    cap = run(_python("print('merhaba dunya')"))
+    cap = run(_writes(b"merhaba dunya\n"))
     assert cap.text() == "merhaba dunya\n"
     assert cap.meta.exit_code == 0
     assert not cap.meta.failed
@@ -136,8 +136,8 @@ def test_a_capture_can_be_found_again_after_the_process_that_made_it_is_gone():
 
 
 def test_captures_do_not_collide_when_the_same_command_runs_twice():
-    a = run(_python("print('ayni')"))
-    b = run(_python("print('ayni')"))
+    a = run(_writes(b"ayni\n"))
+    b = run(_writes(b"ayni\n"))
     assert a.handle != b.handle
 
 

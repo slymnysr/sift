@@ -158,6 +158,40 @@ def ours(running: store.Running) -> bool:
         return False
 
 
+def _running_on_windows(pid: int) -> bool:
+    """Whether that process is still there, without ending it to find out.
+
+    `os.kill(pid, 0)` is a question on POSIX and an execution on Windows. There,
+    every signal except `CTRL_C_EVENT` and `CTRL_BREAK_EVENT` is turned into
+    `TerminateProcess`, with the signal number used as the exit code -- so the
+    probe that costs nothing everywhere else would have `sift list` killing the
+    runs it was asked to list, and `follow` ending the build it was asked to
+    report on.
+
+    Measured on windows-latest: `stop` was followed by `alive` returning True,
+    because the probe and the kill are the same call there and the order of
+    events stopped meaning anything.
+
+    So the question is asked the way Windows asks it: open a handle with the
+    right to wait on it, and see whether the wait would return at once. A
+    process that has exited is signalled; one still running is not, and the wait
+    times out immediately because it was given no time.
+    """
+    import ctypes
+
+    SYNCHRONIZE = 0x0010_0000
+    WAIT_TIMEOUT = 0x0000_0102
+
+    kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+    handle = kernel32.OpenProcess(SYNCHRONIZE, False, pid)
+    if not handle:
+        return False  # gone, or never ours to look at
+    try:
+        return kernel32.WaitForSingleObject(handle, 0) == WAIT_TIMEOUT
+    finally:
+        kernel32.CloseHandle(handle)
+
+
 def _unreaped(pid: int) -> bool:
     """A process that has exited and has not yet been collected by its parent.
 
@@ -197,9 +231,14 @@ def alive(running: store.Running) -> bool:
     process wearing that number is -- see `ours`. Past that, signal 0 asks the
     question without answering it: it checks the process exists and that we may
     signal it, and delivers nothing.
+
+    On Windows it delivers a great deal, which is why that platform is answered
+    somewhere else -- see `_running_on_windows`.
     """
     if not ours(running):
         return False
+    if sys.platform == "win32":
+        return _running_on_windows(running.pid)
     try:
         os.kill(running.pid, 0)
     except ProcessLookupError:

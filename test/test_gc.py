@@ -10,6 +10,7 @@ an exception to it.
 from __future__ import annotations
 
 import json
+import sys
 
 import pytest
 
@@ -26,7 +27,8 @@ def _quiet(monkeypatch):
 
 def _capture(command: str = "one") -> str:
     """A finished capture of a real command, with its own handle."""
-    return capture.run(["python3", "-c", f"print({command!r})"]).handle
+    yazar = f"import sys; sys.stdout.buffer.write({(command + chr(10)).encode()!r})"
+    return capture.run([sys.executable, "-c", yazar]).handle
 
 
 def _age(handle: str, days: float) -> None:
@@ -84,7 +86,7 @@ def test_what_went_is_named_while_it_can_still_be_read():
 
     swept = store.sweep(30 * DAY)
 
-    assert swept[0].command[0] == "python3"
+    assert swept[0].command[0] == sys.executable
     assert swept[0].byte_count > 0
 
 
