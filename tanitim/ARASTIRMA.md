@@ -103,6 +103,23 @@ talep etmene izin veriyor.
 PulseMCP'nin ziyaretçi sayacı bizim için ayrıca değerli: tanıtımın işe yarayıp
 yaramadığını ölçebileceğimiz nadir bir dış gösterge.
 
+### Düzeltme — 9 Eylül 2026: dördü de "ayrı gönderim" değil
+
+Yukarıdaki tablo 2025 mantığıyla yazılmış. 2026'da ekosistem resmî kayıt
+defterinin etrafında toplandı; resmî duyurunun kendi cümlesi kayıt defterinin
+*"primarily designed for programmatic consumption by subregistries (Smithery,
+PulseMCP, Docker Hub, Anthropic, GitHub, etc.)"* olduğunu söylüyor.
+
+- **PulseMCP** gönderimi tamamen durdurmuş; sayfası resmî kayda yayınlamayı
+  öneriyor, *"we will pick it up automatically once we are back"*
+- **Glama** kendini resmî kaydın üst kümesi ilan ediyor, ingest edip yeniden
+  yayınlıyor. Elle gönderim GitHub OAuth ister (tarayıcı)
+- **Smithery** alt kayıt defteri, aynı kaynaktan besleniyor. Elle yayın hesap ister
+- **mcp.so** hâlâ elle: GitHub issue (`chatmcp/mcpso`)
+
+Sonuç: T2 yapıldıysa T4'ün dörtte üçü kendiliğinden oluyor. Ayrıntı:
+`tanitim/T4-DIZINLER.md`.
+
 ---
 
 ## 3. awesome-mcp-servers
