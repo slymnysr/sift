@@ -143,6 +143,10 @@ def run(
         sink.close()
         raise
 
+    # Into the job, so that a timeout reaches what the command starts and not
+    # only the command. Nothing on POSIX: the session does this work there.
+    jobs.joined(job, proc.pid)
+
     if stdin is not None and proc.stdin is not None:
         with contextlib.suppress(OSError):
             proc.stdin.write(stdin)
@@ -361,8 +365,13 @@ def _stop(proc: subprocess.Popen, handle: str) -> None:
     """
     try:
         if sys.platform == "win32":
-            if not jobs.end(handle):
-                proc.kill()
+            # Both, and not one instead of the other. The job holds the
+            # children; the process named on the command line is ended by name.
+            # Treating them as alternatives is how the first version of this
+            # ended an empty job, called that success, and left the command
+            # running -- which CI found on the first run.
+            jobs.end(handle)
+            proc.kill()
         else:
             os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
     except (ProcessLookupError, PermissionError, OSError):

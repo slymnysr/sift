@@ -210,18 +210,23 @@ def _alive(token: str) -> list[str]:
         # Asking WMI is slower and it is the only thing that can answer the
         # question this test is actually asking: is a process carrying this
         # token still running.
+        # The token travels in the environment rather than on the command line,
+        # because a query that carries it matches itself: the first version of
+        # this always found at least one process -- its own -- so the test could
+        # never pass. `pgrep` excludes itself; this has to be told to.
         found = subprocess.run(
             [
                 "powershell.exe",
                 "-NoProfile",
                 "-Command",
                 "Get-CimInstance Win32_Process |"
-                f" Where-Object {{ $_.CommandLine -like '*{token}*' }} |"
+                " Where-Object { $_.CommandLine -like ('*' + $env:SIFT_TOKEN + '*') } |"
                 " ForEach-Object { $_.ProcessId }",
             ],
             capture_output=True,
             text=True,
             check=False,
+            env={**os.environ, "SIFT_TOKEN": token},
         )
     else:
         found = subprocess.run(
