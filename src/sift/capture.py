@@ -330,9 +330,9 @@ def _pump_until_closed(source, sink) -> None:
     """The Windows path: wait on the pipe itself.
 
     Selectors there speak only of sockets, so the read waits until the pipe
-    closes. Combined with having no way to kill a process tree, this is the same
-    honest limit `_new_session` describes: on Windows a command that leaves
-    children behind is watched less closely than on a system with process groups.
+    closes. What used to make that a real limit -- no way to end a tree, so a
+    child holding the pipe could hold the read -- is gone since G7: the tree is
+    in a job object and ending it closes the pipe with it.
     """
     while True:
         chunk = source.read(_READ_CHUNK)
@@ -346,8 +346,12 @@ def _new_session() -> dict[str, object]:
 
     A command that spawns children -- a test runner, a build -- leaves them
     running when only the parent is killed, and those orphans keep writing to a
-    pipe nobody is reading. Windows has no process groups in this sense, so
-    there the child alone is stopped and that is the honest limit.
+    pipe nobody is reading.
+
+    Windows has no process group in this sense. What it has is a job object, and
+    `jobs` uses one -- made before the command starts, ended when a timeout or a
+    `stop` says so. So the sentence this docstring used to end with, that on
+    Windows only the child itself could be stopped, is no longer true.
     """
     if sys.platform == "win32":
         return {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
