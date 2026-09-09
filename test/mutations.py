@@ -853,6 +853,29 @@ MUTATIONS = [
         "            sink.write(block)",
         "        sink.write(source.read(_READ_CHUNK))",
     ),
+    # -- G6: the ceiling, and what it may not cost ---------------------------
+    Mutation(
+        "capture.py",
+        "keeping stops at the ceiling",
+        "        if len(chunk) > room:",
+        "        if False:",
+    ),
+    Mutation(
+        "capture.py",
+        "a ceiling nobody asked for is the one that ships",
+        '    written = (os.environ.get("SIFT_MAX_CAPTURE") or "").strip()\n'
+        "    if not written:\n"
+        "        return _MAX_CAPTURE",
+        '    written = (os.environ.get("SIFT_MAX_CAPTURE") or "").strip()\n'
+        "    if not written:\n"
+        "        return 0",
+    ),
+    Mutation(
+        "view.py",
+        "a run that hit the ceiling says so where it will be read",
+        '    return f" · kept the first {meta.byte_count:,} bytes of it"',
+        '    return ""',
+    ),
     # -- Faz 25: offering it, and writing into somebody else's file ----------
     Mutation(
         "hook.py",

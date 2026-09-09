@@ -37,6 +37,31 @@ from typing import BinaryIO
 from sift import store
 
 _READ_CHUNK = 64 * 1024
+
+# How much of one command's output is kept before keeping stops.
+#
+# The second rule says nothing is thrown away, and this does not throw anything
+# away: what was written stays written and every line of it is still there to
+# `peek`. What it refuses is the other failure, which the second rule was never
+# meant to license -- a command in a loop writing until the disk is full, on a
+# machine somebody else needs.
+#
+# A gigabyte is far past any real build log and reached in seconds by `yes`.
+# `SIFT_MAX_CAPTURE` is in bytes, and 0 means no ceiling at all for anyone who
+# would rather have the disk.
+_MAX_CAPTURE = 1024 * 1024 * 1024
+
+
+def ceiling() -> int:
+    """How many bytes one capture may keep, or 0 for no limit."""
+    written = (os.environ.get("SIFT_MAX_CAPTURE") or "").strip()
+    if not written:
+        return _MAX_CAPTURE
+    try:
+        asked = int(written)
+    except ValueError:
+        return _MAX_CAPTURE
+    return max(asked, 0)
 _TICK = 0.1  # how often a waiting pump looks up to see whether it has been told to stop
 _DRAIN_GRACE = 2.0  # how long a stopped pump may keep collecting before `run` moves on
 
@@ -93,7 +118,10 @@ def run(
     timed_out = False
     exit_code: int | None = None
 
-    sink = open(target, "wb")  # noqa: SIM115 -- the pump closes this; see below
+    sink = _Sink(
+        open(target, "wb"),  # noqa: SIM115 -- the pump closes this; see below
+        ceiling(),
+    )
     try:
         # Running whatever was asked for is the whole point of this tool, so the
         # usual warning about handing a command to the system does not apply here.
@@ -150,6 +178,7 @@ def run(
         duration_s=round(store.now() - started, 3),
         byte_count=target.stat().st_size if target.is_file() else 0,
         cwd=str(Path(cwd).resolve()) if cwd else os.getcwd(),
+        capped=sink.capped,
     )
     store.finish(meta)
     return Capture(meta)
@@ -176,12 +205,15 @@ def keep(source: BinaryIO, name: str = "-") -> Capture:
     handle = store.new_handle([name, str(started)], started)
     target = store.begin(handle)
 
-    with open(target, "wb") as sink:
+    kept = _Sink(open(target, "wb"), ceiling())  # noqa: SIM115 -- closed below
+    try:
         while True:
             block = source.read(_READ_CHUNK)
             if not block:
                 break
-            sink.write(block)
+            kept.write(block)
+    finally:
+        kept.close()
 
     meta = store.Meta(
         handle=handle,
@@ -196,9 +228,47 @@ def keep(source: BinaryIO, name: str = "-") -> Capture:
         duration_s=round(store.now() - started, 3),
         byte_count=target.stat().st_size if target.is_file() else 0,
         cwd=os.getcwd(),
+        capped=kept.capped,
     )
     store.finish(meta)
     return Capture(meta)
+
+
+class _Sink:
+    """A file that stops writing at the ceiling, and remembers that it did.
+
+    Reading does not stop, and that is the whole design. A pipe nobody drains
+    fills up, and a command whose pipe is full stops running -- which would be
+    this tool changing what the command does, the one thing the third rule
+    forbids. So the bytes go on being read; they simply stop being kept.
+
+    Nothing already written is touched. What the ceiling costs is the tail of an
+    output that was going to be enormous, and the footer says so rather than
+    letting a reader believe they are looking at all of it.
+    """
+
+    def __init__(self, target, limit: int) -> None:
+        self._file = target
+        self._limit = limit  # 0 means no ceiling
+        self._written = 0
+        self.capped = False
+
+    def write(self, chunk: bytes) -> int:
+        if not self._limit:
+            return self._file.write(chunk)
+        room = self._limit - self._written
+        if len(chunk) > room:
+            # Everything past the ceiling is dropped here rather than earlier,
+            # so that the chunk which straddles it is kept up to the line and no
+            # further. Once there is no room at all this writes nothing, which
+            # is the same thing said with less code.
+            self.capped = True
+            chunk = chunk[:room]
+        self._written += len(chunk)
+        return self._file.write(chunk)
+
+    def close(self) -> None:
+        self._file.close()
 
 
 def _pump(source, sink, stop: threading.Event) -> None:

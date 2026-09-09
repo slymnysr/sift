@@ -12,7 +12,7 @@ import uuid
 
 import pytest
 
-from sift import store
+from sift import capture, store, view
 from sift.capture import run
 from sift.peek import peek
 
@@ -288,3 +288,127 @@ def test_a_process_that_escapes_the_group_cannot_hold_the_run_open(tmp_path):
         for pid in _alive(token):
             with contextlib.suppress(OSError, ValueError):
                 os.kill(int(pid), signal.SIGKILL)
+
+
+# -- the ceiling, and what it is not allowed to cost --------------------------
+
+
+def test_a_runaway_command_does_not_fill_the_disk(monkeypatch, tmp_path):
+    """The second rule does not license the other failure.
+
+    Nothing is thrown away here: what was written stays written and every line
+    of it is still there to peek. What is refused is a command in a loop writing
+    until the disk is full, on a machine somebody else needs.
+    """
+    monkeypatch.setenv("SIFT_MAX_CAPTURE", "2000")
+
+    got = capture.run(
+        [sys.executable, "-c", "print('x' * 79)\n" * 200],
+        shell=False,
+    )
+
+    assert got.meta.capped, "tavan hic vurulmadi"
+    assert got.meta.byte_count <= 2000
+    assert store.read_raw(got.handle) == got.raw
+
+
+def test_the_command_still_finishes_and_still_reports(monkeypatch):
+    """The third rule, in the place a ceiling is most likely to break it.
+
+    Keeping stops; reading does not. A pipe nobody drains fills, and a command
+    whose pipe is full stops running -- so the bytes go on being read and simply
+    stop being kept. The command's own exit code is still the answer.
+    """
+    monkeypatch.setenv("SIFT_MAX_CAPTURE", "100")
+
+    got = capture.run(
+        [sys.executable, "-c", "print('y' * 200)\nimport sys; sys.exit(7)"],
+        shell=False,
+    )
+
+    assert got.meta.exit_code == 7
+    assert got.meta.capped
+
+
+def test_what_was_kept_is_kept_whole(monkeypatch):
+    """Truncation happens at the end, never in the middle of what is shown."""
+    monkeypatch.setenv("SIFT_MAX_CAPTURE", "10")
+
+    got = capture.run([sys.executable, "-c", "print('abcdefghijklmnop')"], shell=False)
+
+    assert got.raw == b"abcdefghij"
+
+
+def test_no_ceiling_is_a_thing_somebody_can_ask_for(monkeypatch):
+    """The disk is theirs."""
+    monkeypatch.setenv("SIFT_MAX_CAPTURE", "0")
+
+    got = capture.run([sys.executable, "-c", "print('z' * 5000)"], shell=False)
+
+    assert not got.meta.capped
+    assert len(got.raw) > 5000 - 1
+
+
+def test_the_ceiling_holds_across_more_than_one_write(monkeypatch):
+    """The reach past the ceiling, which is where it is easy to get wrong.
+
+    A command that goes over in a single write is the easy case, and every test
+    above is that case. What actually happens to a runaway is that it goes on
+    writing long after the ceiling was reached, and every one of those writes
+    has to be read and none of them kept. The mutation battery found this gap:
+    with the "no room left" branch removed, the tests here still passed.
+    """
+    monkeypatch.setenv("SIFT_MAX_CAPTURE", "50")
+
+    got = capture.run(
+        [
+            sys.executable,
+            "-c",
+            "import sys, time\n"
+            "for _ in range(8):\n"
+            "    sys.stdout.write('z' * 200)\n"
+            "    sys.stdout.flush()\n"
+            "    time.sleep(0.02)\n",
+        ],
+        shell=False,
+    )
+
+    assert got.meta.capped
+    assert got.meta.byte_count == 50, "tavandan sonra da yazilmis"
+    assert len(got.raw) == 50
+
+
+def test_the_ceiling_that_ships_is_a_real_one():
+    """A default of "no limit" would be this feature not existing.
+
+    Nobody sets `SIFT_MAX_CAPTURE`. Whatever it is when nobody sets it is what
+    this phase actually delivers, so that is the thing worth asserting.
+    """
+    assert capture.ceiling() > 0
+    assert capture.ceiling() == capture._MAX_CAPTURE
+
+
+def test_a_ceiling_written_as_nonsense_is_the_shipped_one(monkeypatch):
+    """A typo in a variable must not quietly turn the ceiling off."""
+    monkeypatch.setenv("SIFT_MAX_CAPTURE", "epeyce")
+
+    assert capture.ceiling() == capture._MAX_CAPTURE
+
+
+def test_a_capped_run_says_so_where_it_will_be_read(monkeypatch):
+    """A reader who is not told believes they are looking at the whole run."""
+    monkeypatch.setenv("SIFT_MAX_CAPTURE", "100")
+    got = capture.run([sys.executable, "-c", "print('y' * 200)"], shell=False)
+
+    said = view.footer(got, view.from_lines(["y" * 79], got.handle), "no model")
+
+    assert "kept the first" in said
+
+
+def test_an_ordinary_run_says_nothing_about_a_ceiling():
+    """Teeth: the words above have to be able to be absent."""
+    got = capture.run([sys.executable, "-c", "print('kisa')"], shell=False)
+
+    said = view.footer(got, view.from_lines(["kisa"], got.handle), "no model")
+
+    assert "kept the first" not in said

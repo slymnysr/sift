@@ -163,7 +163,7 @@ def footer(capture: Capture, view: View, who: str) -> str:
     meta = capture.meta
     return (
         f"sift {capture.handle} · {ending(meta)} · {counted(view)}"
-        f" · {who} · {meta.duration_s:.1f}s" + silence(view)
+        f" · {who} · {meta.duration_s:.1f}s" + kept(meta) + silence(view)
     )
 
 
@@ -231,6 +231,19 @@ def ending(meta: store.Meta) -> str:
     and `exit None` in a listing is two tools wearing one name.
     """
     return "timed out" if meta.timed_out else f"exit {meta.exit_code}"
+
+
+def kept(meta: store.Meta | None) -> str:
+    """Said when keeping stopped before the command did, and nothing otherwise.
+
+    A reader who is not told this believes they are looking at the whole of a
+    run. They are looking at the first gigabyte of one, and the difference
+    matters most in exactly the case that causes it: something in a loop, where
+    what went wrong is at the end nobody kept.
+    """
+    if meta is None or not meta.capped:
+        return ""
+    return f" · kept the first {meta.byte_count:,} bytes of it"
 
 
 def state(running: store.Running | None, meta: store.Meta | None) -> str:
@@ -317,6 +330,7 @@ def peek_footer(found: Peek) -> str:
         f"sift {found.handle} · lines {found.first_line:,}-{found.last_line:,}"
         f" of {found.total_lines:,}"
     )
+    where += kept(store.load(found.handle))
     if not found.matched:
         return where
     line = "line" if found.matched == 1 else "lines"

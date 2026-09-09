@@ -72,6 +72,10 @@ class Meta:
     duration_s: float
     byte_count: int
     cwd: str
+    # Whether keeping stopped before the command did. Defaulted because a
+    # capture written by an older version has no opinion about it, and the
+    # honest reading of no opinion is "nothing was left out".
+    capped: bool = False
 
     @property
     def failed(self) -> bool:

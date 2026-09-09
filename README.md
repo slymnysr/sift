@@ -123,6 +123,7 @@ is still shown to you in full**.
 Three switches:
 
 ```bash
+SIFT_MAX_CAPTURE=0  # keep everything a command writes, however much that is
 SIFT_BASE_URL=... # ask your own endpoint instead, and no key is wanted
 SIFT_MODELS=a,b   # which models to ask there, best first
 SIFT_NO_MODEL=1   # never send anything; use the deterministic view
@@ -152,6 +153,15 @@ says `(remembered)` where it would otherwise name the model.
 Captured bytes never leave `$SIFT_HOME` (`~/.cache/sift` by default). Nothing is
 uploaded, nothing is logged elsewhere, and removing a capture directory removes
 everything that was ever kept about it.
+
+One capture keeps at most a gigabyte. That is far past any real build log and
+a few seconds of a command stuck in a loop, which is the case it exists for:
+nothing is thrown away, and the disk somebody else needs is not filled either.
+Reading never stops — a pipe nobody drains would stop the command, and that is
+the one thing this will not do — so the command finishes, its exit code is its
+own, and the footer says `kept the first 1,073,741,824 bytes of it` rather than
+letting you believe you have the whole run. `SIFT_MAX_CAPTURE=0` turns the
+ceiling off for anyone who would rather have the disk.
 
 They also never go away on their own. Nothing here sweeps, expires or tidies in
 the background: `sift gc [DAYS]` is the only thing that deletes a capture, and
