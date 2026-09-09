@@ -25,7 +25,7 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Four places say the version and they are written by hand. The test suite
       # holds three of them together; the tag is the fourth and only exists here.

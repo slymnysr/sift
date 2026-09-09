@@ -910,6 +910,13 @@ MUTATIONS = [
         '        weight = f"{saving.carried:>9,}" if saving.carried else f"{\'—\':>9}"',
         '        weight = f"{saving.carried:>9,}"',
     ),
+    # -- G9: the repository as somebody else finds it -------------------------
+    Mutation(
+        "./.gitignore",
+        "the lock is kept rather than ignored",
+        "*.egg-info/\n",
+        "*.egg-info/\nuv.lock\n",
+    ),
     # -- Faz 25: offering it, and writing into somebody else's file ----------
     Mutation(
         "hook.py",

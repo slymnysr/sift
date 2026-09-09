@@ -395,6 +395,12 @@ The two callers are answered differently, on purpose:
 If you *want* to run without a model, say so with `SIFT_NO_MODEL=1`. That is a
 decision rather than an oversight, everything works, and nothing lectures you.
 
+## Contributing, and reporting something
+
+`CONTRIBUTING.md` is the map: two languages on purpose, three rules that do not
+bend, and a mutation for every rule. `SECURITY.md` says what runs, what leaves
+the machine, and where to send a finding privately.
+
 ## How it was built
 
 Twenty-four phases, each one closed before the next began, each with a note in

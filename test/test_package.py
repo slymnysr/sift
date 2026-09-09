@@ -123,6 +123,33 @@ def test_the_readme_names_every_tool_the_server_offers():
     assert "`list` and `stats` are deliberately not offered" in flat
 
 
+def test_the_repository_says_how_to_report_and_how_to_help():
+    """Two files a stranger looks for before they look at anything else.
+
+    This tool runs shell commands and sends text over a network, so where to
+    send a security finding is not decoration. And the way this repository works
+    is unusual enough -- notes in one language, code in another, a mutation for
+    every rule -- that an hour is wasted by anyone who has to work it out.
+    """
+    for name in ("SECURITY.md", "CONTRIBUTING.md"):
+        found = KOK / name
+        assert found.is_file(), f"{name} yok"
+        assert len(found.read_text(encoding="utf-8")) > 500, f"{name} bir basliktan ibaret"
+
+
+def test_the_lock_is_kept_rather_than_ignored():
+    """A resolution nobody wrote down is a build that cannot be repeated.
+
+    It is also, quietly, a cache that never works: CI keys its dependency cache
+    on this file, and for as long as it was ignored every run resolved and
+    downloaded everything again while reporting a cache hit on nothing.
+    """
+    assert (KOK / "uv.lock").is_file(), "kilit dosyasi yok"
+
+    ignored = (KOK / ".gitignore").read_text(encoding="utf-8").split()
+    assert "uv.lock" not in ignored, "kilit dosyasi yeniden gormezden gelinmis"
+
+
 def test_publishing_happens_on_a_tag_and_nowhere_else():
     """A version that exists on PyPI cannot be taken back.
 

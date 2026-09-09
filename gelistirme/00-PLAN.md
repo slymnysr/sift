@@ -33,7 +33,7 @@ geldiğinde mutasyon bataryasına da bir satır düşer.
 | G6 | Diskin tavanı | Bir yakalamanın yazabileceği bir sınır, ve söylenmiş bir sınır | `sift run -- yes` bugün diski doldurur | **bitti** |
 | G7 | Windows'ta ağacı bitirmek | `stop` orada da başlattığı her şeyi bitirir | README bunu iddia ediyor, Windows'ta sınanmıyor | **bitti** — CI Windows yeşil |
 | G8 | Kazancı araç söylesin | `stats` kazanılan token'ı da basar | Araç cevabı biliyor ve basmıyor | **bitti** |
-| G9 | Depo sağlığı | `SECURITY.md`, `CONTRIBUTING.md`, `uv.lock`, güncel action'lar | Depo halka açık ve araç kabuk komutu çalıştırıyor | bekliyor |
+| G9 | Depo sağlığı | `SECURITY.md`, `CONTRIBUTING.md`, `uv.lock`, güncel action'lar | Depo halka açık ve araç kabuk komutu çalıştırıyor | **bitti** |
 | G10 | Bataryayı uçtan uca | 182 mutasyonun tamamı bir kez koşar | Kaç kuralın korumasız olduğunu bilmiyoruz | bekliyor |
 
 Sıra rastgele değil: G1 en çok kişiye dokunan, G2–G4 istemci tarafını
