@@ -1199,7 +1199,7 @@ MUTATIONS = [
         "the published version is the one the package reports",
         # This anchor moves with every release, and the battery says NO ANCHOR
         # when it is forgotten -- which is how it was found, three releases late.
-        '__version__ = "1.0.2"',
+        '__version__ = "1.1.0"',
         '__version__ = "0.9.0"',
     ),
     # -- Faz 12: the caller's own say ------------------------------------------

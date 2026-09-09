@@ -3,7 +3,7 @@
   "name": "io.github.slymnysr/sift",
   "title": "sift",
   "description": "Runs a command, keeps every byte on disk, returns only the lines that matter",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "websiteUrl": "https://github.com/slymnysr/sift",
   "repository": {
     "url": "https://github.com/slymnysr/sift",
@@ -14,7 +14,7 @@
       "registryType": "pypi",
       "registryBaseUrl": "https://pypi.org",
       "identifier": "sift-cli",
-      "version": "1.0.2",
+      "version": "1.1.0",
       "runtimeHint": "uvx",
       "runtimeArguments": [
         {
