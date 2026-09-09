@@ -1,0 +1,72 @@
+name: registry
+
+# The MCP registry is the one channel that reaches a model too new to have been
+# trained on this package: clients query it live. Publishing there is a separate
+# act from publishing to PyPI because it depends on it -- the registry proves
+# that we own `sift-cli` by reading the description of the exact version named
+# in server.json, which only exists once PyPI has it.
+#
+# So this runs on the tag as well, and waits rather than assuming.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      # Trusted publishing again, and for the same reason: GitHub signs a
+      # short-lived token saying which repository this is, and the registry
+      # believes that rather than a secret we would have to store and rotate.
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      # Four places say the version and they are written by hand. The test suite
+      # holds three of them together; the tag is the fourth and only exists here.
+      - name: The tag and server.json agree
+        if: github.ref_type == 'tag'
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          entry=$(python -c "import json;print(json.load(open('server.json'))['version'])")
+          echo "tag=$tag server.json=$entry"
+          test "$tag" = "$entry"
+
+      # PyPI is the source of truth for ownership, and the release workflow is
+      # still finishing when this starts. Ten minutes is generous; the wait is
+      # cheap and the failure it prevents is a publish that says the package
+      # does not exist.
+      - name: Wait until PyPI has that version
+        run: |
+          version=$(python -c "import json;print(json.load(open('server.json'))['version'])")
+          for _ in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' \
+              "https://pypi.org/pypi/sift-cli/$version/json")
+            if [ "$code" = "200" ]; then
+              echo "PyPI has $version"
+              exit 0
+            fi
+            echo "PyPI does not have $version yet ($code); waiting"
+            sleep 10
+          done
+          echo "PyPI never showed $version" >&2
+          exit 1
+
+      # Pinned, not `latest`: what publishes a release should not change under
+      # it between one release and the next.
+      - name: Install mcp-publisher
+        run: |
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/download/v1.8.1/mcp-publisher_linux_amd64.tar.gz" \
+            | tar xz mcp-publisher
+          ./mcp-publisher --help > /dev/null
+
+      - name: Log in with GitHub OIDC
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish
+        run: ./mcp-publisher publish

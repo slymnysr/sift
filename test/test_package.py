@@ -6,6 +6,7 @@ later: a `src` layout that was never installed, and a version that drifts from
 the one the packaging metadata publishes.
 """
 
+import json
 import tomllib
 from pathlib import Path
 
@@ -58,6 +59,29 @@ def test_notes_and_tests_live_in_their_own_folders():
 
 def _readme() -> str:
     return (KOK / "README.md").read_text(encoding="utf-8")
+
+
+def test_the_registry_entry_names_this_version_and_this_package():
+    """`server.json` is a fourth place the version is written down.
+
+    The MCP registry proves ownership by reading the description of the exact
+    package version named here, so a `server.json` left behind at the last
+    release does not publish an old entry -- it fails to publish at all, in CI,
+    minutes after the release it was meant to accompany. Cheaper to notice here.
+
+    The name is checked against the README for the same reason: the registry
+    matches them character for character, and the marker is an HTML comment
+    nobody reads.
+    """
+    entry = json.loads((KOK / "server.json").read_text(encoding="utf-8"))
+    (package,) = entry["packages"]
+
+    assert entry["version"] == sift.__version__
+    assert package["version"] == sift.__version__
+    assert package["identifier"] == tomllib.loads(
+        (KOK / "pyproject.toml").read_text(encoding="utf-8")
+    )["project"]["name"]
+    assert f"mcp-name: {entry['name']}" in _readme(), "README'deki isaret ada uymuyor"
 
 
 def test_the_readme_names_every_command_the_tool_answers_to():
