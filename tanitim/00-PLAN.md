@@ -33,7 +33,7 @@ Her faz kendi başına bitmiş sayılır ve doğrulanabilir bir çıktısı vard
 |---|-----|----------|---|
 | T1 | Sürüm 1.0.1 | Kayıt defterinin şart koştuğu `mcp-name` işareti + bekleyen kod düzeltmesi, PyPI'da | **bitti** |
 | T2 | Resmî kayıt defteri | `server.json`, `registry.modelcontextprotocol.io`'da yayında | **bitti** (1.0.2) |
-| T3 | GitHub keşfedilebilirliği | topics, açıklama, sürüm notu | bekliyor |
+| T3 | GitHub keşfedilebilirliği | topics, açıklama, sürüm notu | **bitti** |
 | T4 | Dizinler | mcp.so, PulseMCP, Glama, Smithery | bekliyor |
 | T5 | awesome-mcp-servers | PR açık | bekliyor |
 | T6 | README konumlandırma | Problem, insanların aradığı kelimelerle anılıyor | bekliyor |
