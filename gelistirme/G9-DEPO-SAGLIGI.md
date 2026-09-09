@@ -65,9 +65,18 @@ CI her koşuda Node 20'nin kalktığını söylüyordu. Beşi de güncellendi:
 | action | önce | sonra |
 |---|---|---|
 | `actions/checkout` | v4 | v7 |
-| `astral-sh/setup-uv` | v5 | v10 |
+| `astral-sh/setup-uv` | v5 | **v10.0.1** |
 | `actions/upload-artifact` | v4 | v7 |
 | `actions/download-artifact` | v4 | v8 |
 | `pypa/gh-action-pypi-publish` | `release/v1` | değişmedi (hareketli etiket kasıtlı) |
 
-Sürümler tahminle değil, `gh api repos/<r>/releases/latest` ile okundu.
+Sürümler tahminle değil, `gh api repos/<r>/releases/latest` ile okundu — ama
+**etiketin biçimi** tahmin edildi ve CI onu düzeltti.
+
+`actions/*` büyük sürüm takma adı yayınlıyor (`v7`, `v8`); `astral-sh/setup-uv`
+yayınlamıyor, etiketleri yalnız tam sürüm (`v10.0.1`, `v9.0.0`). `@v10` hiçbir
+şeye çözülmüyor ve CI'ın **beş ayağı da tek satır çalıştırmadan** düşüyor.
+Doğrulaması `gh api repos/<r>/tags` — biri okundu, öteki varsayıldı, ve ikisi
+aynı komutla okunabilirdi.
+
+Bu yüzden tam sürüme sabitlendi, ve neden sabitlendiği iş akışının içinde yazılı.

@@ -24,7 +24,10 @@ jobs:
         python: ["3.12", "3.13"]
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      # Pinned to a full version, not a major alias: this action does not
+      # publish one. `@v10` resolves to nothing and every leg of CI fails
+      # before it runs a line -- which is how this was found.
+      - uses: astral-sh/setup-uv@v10.0.1
         with:
           enable-cache: true
       - name: Install
@@ -39,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.0.1
 
       # The tag and the version in the package have to be the same thing. They
       # are written in two places by two people at two times, so they are

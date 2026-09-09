@@ -24,7 +24,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v10
+      # Pinned to a full version, not a major alias: this action does not
+      # publish one. `@v10` resolves to nothing and every leg of CI fails
+      # before it runs a line -- which is how this was found.
+      - uses: astral-sh/setup-uv@v10.0.1
         with:
           enable-cache: true
 
