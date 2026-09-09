@@ -805,6 +805,20 @@ MUTATIONS = [
         "    return written or None",
         '    return os.environ.get("SIFT_BASE_URL")',
     ),
+    # -- G2: what a tool says it does before anybody asks --------------------
+    Mutation(
+        "server.py",
+        "the tool that runs arbitrary commands is not marked read-only",
+        '    name="run",\n    title="Run a command",\n    annotations=ACTS,',
+        '    name="run",\n    title="Run a command",\n    annotations=READS,',
+    ),
+    Mutation(
+        "server.py",
+        "only the tool that asks nobody says it stays on this machine",
+        '    name="peek",\n    title="Peek at a capture",\n'
+        "    annotations=READS_LOCALLY,",
+        '    name="peek",\n    title="Peek at a capture",\n    annotations=READS,',
+    ),
     # -- Faz 25: offering it, and writing into somebody else's file ----------
     Mutation(
         "hook.py",

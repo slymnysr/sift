@@ -330,6 +330,65 @@ def _text(result) -> str:
     return "\n".join(b.text for b in result.content if b.type == "text")
 
 
+# What each tool tells a client about itself, before the client decides whether
+# to ask a person. Written out here rather than read from the server, because a
+# test that reads the answer from the thing it is testing proves nothing: these
+# are a promise about `run` being marked as what it is.
+HINTS = {
+    "run": (False, True, False, True),
+    "follow": (False, True, False, True),
+    "tool": (False, True, False, True),
+    "outline": (True, False, True, True),
+    "digest": (True, False, True, True),
+    "digest_many": (True, False, True, True),
+    "peek": (True, False, True, False),
+}
+
+
+async def test_every_tool_says_what_it_does_to_the_machine(tmp_path):
+    """A client that automates has to be able to tell `peek` from `run`.
+
+    Both come back as text and both look alike from the outside. One reads a
+    file this process already wrote; the other runs whatever command it is
+    handed. A client deciding what to allow without asking, and a directory
+    saying which tools are safe in an agent loop, both read these hints.
+
+    `run` and `tool` are marked destructive on purpose. `tool` passes its
+    arguments through to `sg`, which rewrites files when it is asked to, so
+    read-only would be a claim this cannot keep.
+    """
+    async with Client(_parameters(tmp_path)) as client:
+        tools = {tool.name: tool for tool in (await client.list_tools()).tools}
+
+    assert set(tools) == TOOLS
+    for name, (read_only, destructive, idempotent, open_world) in HINTS.items():
+        note = tools[name].annotations
+        assert note is not None, f"{name} kunyesiz"
+        assert note.read_only_hint is read_only, name
+        assert note.destructive_hint is destructive, name
+        assert note.idempotent_hint is idempotent, name
+        assert note.open_world_hint is open_world, name
+
+
+async def test_only_peek_claims_to_stay_on_this_machine(tmp_path):
+    """Teeth for the row above: six of the seven ask a model, and say so."""
+    async with Client(_parameters(tmp_path)) as client:
+        tools = {tool.name: tool for tool in (await client.list_tools()).tools}
+
+    local = {name for name, tool in tools.items() if not tool.annotations.open_world_hint}
+    assert local == {"peek"}
+
+
+async def test_every_tool_has_a_name_a_person_can_read(tmp_path):
+    """`digest_many` is an identifier; "Digest several files" is a label."""
+    async with Client(_parameters(tmp_path)) as client:
+        tools = (await client.list_tools()).tools
+
+    for tool in tools:
+        assert tool.title, f"{tool.name} basliksiz"
+        assert tool.title != tool.name
+
+
 async def test_the_installed_server_answers_over_stdio(tmp_path):
     """The one test that runs the packaged thing the way a client will.
 

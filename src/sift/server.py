@@ -45,6 +45,8 @@ except ImportError as exc:
     ) from exc
 
 
+from mcp.types import ToolAnnotations
+
 from sift import __version__, store
 from sift.background import launch, seen, unread, wait_for
 from sift.background import stop as stop_run
@@ -115,6 +117,39 @@ def _unset() -> bool:
     return sending_on() and not somewhere_to_ask()
 
 
+# What a client is told about a tool before it decides whether to ask a person
+# first. These are hints and they are read by things that automate: a client may
+# run a read-only tool without interrupting anyone, and a directory indexes them
+# to say which tools are safe inside an agent loop.
+#
+# So they are filled in the way they will be read, not the way that flatters.
+# `run` executes whatever command it is handed, and `tool` passes its arguments
+# through to `sg`, which rewrites files when asked to. Both of those are
+# destructive and saying otherwise would be selling something.
+#
+# `open_world` is about whether the tool reaches beyond this machine. Six of the
+# seven ask a model, so six of them do. `peek` reads a local file and asks
+# nobody, and it is the only one that can say so.
+READS = ToolAnnotations(
+    read_only_hint=True,
+    destructive_hint=False,
+    idempotent_hint=True,
+    open_world_hint=True,
+)
+READS_LOCALLY = ToolAnnotations(
+    read_only_hint=True,
+    destructive_hint=False,
+    idempotent_hint=True,
+    open_world_hint=False,
+)
+ACTS = ToolAnnotations(
+    read_only_hint=False,
+    destructive_hint=True,
+    idempotent_hint=False,
+    open_world_hint=True,
+)
+
+
 INSTRUCTIONS = """\
 Use `run` in place of a plain shell tool whenever a command may print more than
 a few dozen lines: test suites, builds, installers, log tails, recursive greps.
@@ -171,6 +206,8 @@ server = MCPServer(
 
 @server.tool(
     name="run",
+    title="Run a command",
+    annotations=ACTS,
     description=(
         "Run a shell command and return only the lines that mattered instead of all "
         "of its output. Every byte is kept on disk and never enters the conversation, "
@@ -250,6 +287,8 @@ def _start(command: str, timeout: float | None, cwd: str | None = None) -> str:
 
 @server.tool(
     name="follow",
+    title="Follow a background run",
+    annotations=ACTS,
     description=(
         "Return what a background command has printed since the last time you asked, "
         "and nothing you have already been shown. Use it with the handle from a "
@@ -319,6 +358,8 @@ def follow(
 
 @server.tool(
     name="outline",
+    title="Outline a file",
+    annotations=READS,
     description=(
         "Return what a file declares -- its types, functions, exports, targets and "
         "settings -- without their bodies, so that reading a 2,000-line source file "
@@ -352,6 +393,8 @@ def outline(path: str, budget: int | None = None, keep: str | None = None) -> st
 
 @server.tool(
     name="digest",
+    title="Digest a file",
+    annotations=READS,
     description=(
         "Read a file and return a distilled view of what is in it instead of its "
         "text. This is for anything already written down that would flood the "
@@ -387,6 +430,8 @@ def digest(path: str, budget: int | None = None, keep: str | None = None) -> str
 
 @server.tool(
     name="tool",
+    title="Run a dense tool",
+    annotations=ACTS,
     description=(
         "Run one of three dense tools and return a distilled view of what it printed: "
         "`sg` (ast-grep) for structural search, `diff` (difftastic) for a diff that "
@@ -432,6 +477,8 @@ def tool(name: str, args: list[str] | None = None) -> str:
 
 @server.tool(
     name="digest_many",
+    title="Digest several files",
+    annotations=READS,
     description=(
         "Digest several files in one call, asked at the same time. Use it whenever "
         "there is more than one file to read: four logs cost four waits asked one by "
@@ -461,6 +508,8 @@ def digest_many(paths: list[str], budget: int | None = None, keep: str | None = 
 
 @server.tool(
     name="peek",
+    title="Peek at a capture",
+    annotations=READS_LOCALLY,
     description=(
         "Return the exact original lines of a capture or a file, byte for byte, with "
         "the line numbers they had there. Use it with the handle at the end of a "

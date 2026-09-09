@@ -26,7 +26,7 @@ geldiğinde mutasyon bataryasına da bir satır düşer.
 | # | Faz | Ne biter | Neden | Durum |
 |---|-----|----------|-------|---|
 | G1 | Anahtar tek yol olmasın | Kendi uç noktanı gösterdiğinde anahtarsız çalışır | Bugün sift'i denemek için NVIDIA anahtarı şart — benimsemenin önündeki en büyük tek engel | **bitti** |
-| G2 | Araçların künyesi | Yedi araç `annotations` + `title` taşır | `peek` bir dosya okur, `run` rastgele komut çalıştırır; istemci şu an ikisini ayırt edemiyor | bekliyor |
+| G2 | Araçların künyesi | Yedi araç `annotations` + `title` taşır | `peek` bir dosya okur, `run` rastgele komut çalıştırır; istemci şu an ikisini ayırt edemiyor | **bitti** |
 | G3 | Sonucun içinde veri | Metin aynı, yanında `handle`/`exit`/`shown`/`model` alanları | Ajan çıkış kodunu düzyazıdan çıkarmak zorunda kalmasın | bekliyor |
 | G4 | Uzun komut sessiz kalmasın | `run` ilerleme bildirir | 5 dakikalık derleme şu an asılı görünüyor | bekliyor |
 | G5 | Boru ve modül | `sift digest -`, `python -m sift` | İkisi de Unix'te ve Python'da beklenen yol; ikisi de yok | bekliyor |
