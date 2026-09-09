@@ -3,7 +3,7 @@
 Bu dosya İŞ 1'in hafızası. Her yeni bulgu, her ret, her ölçüm buraya yazılır.
 Amacı altı ay sonra "bunu denemiş miydik" sorusunu cevaplamak.
 
-**Son güncelleme:** 9 Eylül 2026
+**Son güncelleme:** 9 Eylül 2026 (T2 bitti)
 
 ---
 
@@ -56,10 +56,28 @@ HTML yorumu içinde gizlenebilir:
 ```
 
 **Sonucu:** README paketin içinde yayınlandığı için, bu işaret olmadan
-yayınlanmış bir sürüm doğrulanamaz. **1.0.0'da yok → yeni sürüm şart.**
+yayınlanmış bir sürüm doğrulanamaz. 1.0.0'da yoktu; **1.0.1'de eklendi ve
+PyPI'daki açıklamada doğrulandı.**
 
 > Not: crates.io HTML yorumlarını siliyor, orada görünür metin gerekiyor.
 > PyPI ve NuGet yorumu koruyor. Bizde sorun yok.
+
+### Komutun adı — belgede yazmayan kısıt
+
+Bir istemci girdiden komutu şu sırayla kuruyor (kayıt defterinin Snyk örneği):
+
+```
+<runtimeHint> <runtimeArguments...> <identifier> <packageArguments...>
+```
+
+`identifier` PyPI paket adı olmak zorunda (sahiplik oradan doğrulanıyor). Yani
+`uvx <paket adı>` çalışmalı — **konsol komutunun adı paketin adı olmalı.**
+Hiçbir belgede yazmıyor; kayıt defterindeki 627 PyPI paketinden yalnız 5'i
+`--from` kullanıyor, gerisi bu varsayıma uyuyor.
+
+Bizde uymuyordu (`sift` PyPI'da alınmış, paket `sift-cli`, komutlar `sift` ve
+`sift-mcp`). 1.0.2'de `sift-cli` konsol komutu ve `sift mcp` alt komutu
+eklendi. Ayrıntı: `tanitim/T2-KAYIT-DEFTERI.md`.
 
 ### Diğer kısıtlar
 
@@ -115,14 +133,14 @@ var (kurulum talimatı 28. fazda düzeltildi).
 
 ## 5. Ölçüm — bugünün taban çizgisi
 
-| gösterge | 9 Eylül 2026 |
-|---|---|
-| GitHub yıldız | 0 |
-| GitHub topics | 0 |
-| PyPI sürüm | 1.0.0 |
-| PyPI indirme | (ölçülmedi) |
-| Kayıt defteri | kayıtlı değil |
-| Dizin | 0/4 |
+| gösterge | 9 Eylül (sabah) | 9 Eylül (T2 sonrası) |
+|---|---|---|
+| GitHub yıldız | 0 | 0 |
+| GitHub topics | 0 | 0 |
+| PyPI sürüm | 1.0.0 | **1.0.2** |
+| PyPI indirme | (ölçülmedi) | (ölçülmedi) |
+| Kayıt defteri | kayıtlı değil | **`io.github.slymnysr/sift`, active** |
+| Dizin | 0/4 | 0/4 |
 
 Sonraki ölçümler buraya eklenecek.
 
