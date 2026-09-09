@@ -182,6 +182,9 @@ class View:
     # was remembered -- both of which are true, and both of which are the point
     # of counting it.
     tokens: int = 0
+    # What the questions carried out, in the same tokens: the capture as it was
+    # put to the model. Summed the same way and zero for the same two reasons.
+    carried: int = 0
 
     @property
     def folded(self) -> int:
@@ -383,6 +386,7 @@ def select(
     asks = 0
 
     spent = 0
+    carried = 0
     for answer in _ask_all(judge, asked, batches):
         asks += 1
         if answer is None:
@@ -390,6 +394,11 @@ def select(
             continue
         model = answer.model
         spent += answer.tokens
+        # Only here, and deliberately not in `narrow`. This pass carries the
+        # whole capture; narrowing carries a shortlist drawn from it, and adding
+        # that in would count some lines twice -- inflating the one number a
+        # reader is going to divide by.
+        carried += answer.carried
         chosen |= read_numbers(answer.text, len(lines), first)
 
     if not chosen and not always:
@@ -419,6 +428,7 @@ def select(
         unanswered=unanswered,
         unit=unit,
         tokens=spent,
+        carried=carried,
     )
 
 

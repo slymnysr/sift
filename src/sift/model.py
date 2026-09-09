@@ -126,6 +126,12 @@ class Answer:
     # Zero when the reply did not say, which is the honest answer to "how many"
     # when nobody counted.
     tokens: int = 0
+    # The prompt side of the same count: what the endpoint made of everything it
+    # was handed. That is the output itself, numbered, with the question in front
+    # of it -- so it is a little more than the output alone and it is measured,
+    # which is the trade. It is the only number this tool can get for free that
+    # says how much a capture would have weighed in a conversation.
+    carried: int = 0
 
 
 Transport = Callable[..., Reply]
@@ -325,6 +331,7 @@ class Bridge:
                                 model=model,
                                 tries=tries,
                                 tokens=_spent(reply.body),
+                                carried=_carried(reply.body),
                             ),
                             False,
                         )
@@ -453,6 +460,22 @@ def _spent(body: bytes) -> int:
     try:
         usage = json.loads(body)["usage"]
         return max(0, int(usage["total_tokens"]))
+    except (json.JSONDecodeError, UnicodeDecodeError, KeyError, TypeError, ValueError):
+        return 0
+
+
+def _carried(body: bytes) -> int:
+    """What the endpoint made of what it was given, or zero if it did not say.
+
+    Read for the same reason as `_spent` and refused in the same way: zero means
+    nobody counted. What it counts is everything that went out -- the numbered
+    lines and the question in front of them -- so it is more than the capture
+    alone by the size of the numbering. That overhead is said out loud wherever
+    the number is printed rather than subtracted by guesswork here.
+    """
+    try:
+        usage = json.loads(body)["usage"]
+        return max(0, int(usage["prompt_tokens"]))
     except (json.JSONDecodeError, UnicodeDecodeError, KeyError, TypeError, ValueError):
         return 0
 

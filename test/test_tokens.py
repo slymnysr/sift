@@ -97,7 +97,7 @@ def test_a_view_nobody_could_ask_about_costs_nothing(kayit):
     assert built.tokens == 0
 
 
-def _recorded(handle: str, tokens: int) -> None:
+def _recorded(handle: str, tokens: int, carried: int = 0) -> None:
     """A finished capture with a view already measured, written straight to disk."""
     store.begin(handle)
     store.record(
@@ -110,6 +110,7 @@ def _recorded(handle: str, tokens: int) -> None:
             model="test-model",
             asks=1,
             tokens=tokens,
+            carried=carried,
         )
     )
     store.finish(
@@ -182,3 +183,77 @@ def test_the_footer_is_untouched_by_any_of_this(kayit):
 
     assert built is not None
     assert "250" not in view.outline_footer(str(kayit), built, "test-model")
+
+
+# -- what the output weighed, next to what the asking cost --------------------
+
+
+def test_the_prompt_side_of_the_count_is_read_too():
+    """Two numbers off one reply, and neither of them is arithmetic."""
+    body = _reply(prompt_tokens=900, completion_tokens=12, total_tokens=912)
+
+    assert model._carried(body) == 900
+    assert model._spent(body) == 912
+
+
+@pytest.mark.parametrize(
+    ("body", "why"),
+    [
+        (_reply(), "no usage in the reply"),
+        (b'{"usage": {"prompt_tokens": "many"}}', "a count that is not a number"),
+        (b'{"usage": null}', "usage that is not an object"),
+        (b"not json at all", "a body that is not a reply"),
+        (b'{"usage": {"prompt_tokens": -5}}', "a count below zero"),
+    ],
+)
+def test_a_reply_that_did_not_weigh_it_says_zero(body, why):
+    assert model._carried(body) == 0, why
+
+
+def test_what_the_capture_weighed_reaches_the_view(kayit):
+    built = d.digest(kayit, _Judge("3", tokens=250, carried=900))
+
+    assert built is not None
+    assert built.carried == 900
+
+
+def test_narrowing_is_not_counted_into_what_the_capture_weighed(kayit):
+    """The one place this number could quietly double.
+
+    Narrowing asks again about a shortlist drawn from the same capture. Adding
+    its prompt side in would count some lines twice and inflate the very number
+    a reader is going to divide by -- so the first pass carries the capture and
+    nothing after it does.
+    """
+    every = ", ".join(str(n) for n in range(1, 41))
+    judge = _Judge(every, "3", tokens=100, carried=700)
+
+    built = distill.select(LOG.splitlines(), "which lines?", "h", judge, budget=2)
+
+    assert built is not None
+    assert built.asks > 1, "this text was supposed to need narrowing"
+    assert built.tokens == 100 * built.asks, "cost counts every ask"
+    assert built.carried == 700, "and the weight counts only the pass that carried it"
+
+
+def test_the_report_prints_what_the_output_weighed(capsys):
+    _recorded("aaaa1111", tokens=1_234, carried=21_392)
+
+    assert cli.main(["stats"]) == 0
+
+    said = capsys.readouterr().out
+    assert "weighed" in said
+    assert "21,392" in said
+    assert "numbering and question included" in said, "fazlaligi soylenmeli"
+
+
+def test_a_run_whose_weight_nobody_counted_is_a_dash(capsys):
+    """The same refusal as the cost beside it: zero means nobody counted."""
+    _recorded("aaaa1111", tokens=1_000, carried=5_000)
+    _recorded("bbbb2222", tokens=1_000, carried=0)
+
+    assert cli.main(["stats"]) == 0
+
+    said = capsys.readouterr().out
+    assert "1 not counted" in said
+    assert "—" in said

@@ -57,6 +57,7 @@ def best_view(
             asks=view.asks,
             unanswered=view.unanswered,
             tokens=view.tokens,
+            carried=view.carried,
         )
     )
     return view, who

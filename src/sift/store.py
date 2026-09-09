@@ -297,6 +297,11 @@ class Saving:
     # free. A report that told those two apart by guessing would be inventing
     # the only number here that is not this tool's own arithmetic.
     tokens: int = 0
+    # What the capture weighed on the way out, in those same tokens: the lines
+    # numbered, with the question in front of them. Defaulted like the two above
+    # and zero for the same reason. It is a little more than the capture alone,
+    # by the size of the numbering, and `stats` says so where it prints it.
+    carried: int = 0
 
     @property
     def part(self) -> float:

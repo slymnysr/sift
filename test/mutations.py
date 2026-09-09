@@ -891,6 +891,25 @@ MUTATIONS = [
         '    return sys.platform == "win32"',
         "    return True",
     ),
+    # -- G8: what the output weighed, next to what the asking cost -----------
+    Mutation(
+        "model.py",
+        "the weight is read from the reply, not guessed",
+        '        return max(0, int(usage["prompt_tokens"]))',
+        "        return 0",
+    ),
+    Mutation(
+        "distill.py",
+        "narrowing does not count the capture a second time",
+        "        carried += answer.carried",
+        "        carried += answer.carried + answer.carried",
+    ),
+    Mutation(
+        "cli.py",
+        "a run whose weight nobody counted is a dash, not a zero",
+        '        weight = f"{saving.carried:>9,}" if saving.carried else f"{\'—\':>9}"',
+        '        weight = f"{saving.carried:>9,}"',
+    ),
     # -- Faz 25: offering it, and writing into somebody else's file ----------
     Mutation(
         "hook.py",

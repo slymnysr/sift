@@ -735,18 +735,22 @@ def _stats(args: list[str]) -> int:
 
     print(
         f"{'handle':8}  {'captured':>12}  {'shown':>10}  {'part':>6}"
-        f"  {'asks':>4}  {'tokens':>8}  command"
+        f"  {'asks':>4}  {'weighed':>9}  {'cost':>8}  command"
     )
-    raw = shown = spent = counted = 0
+    raw = shown = spent = carried = counted = weighed_runs = 0
     for meta, saving in found:
         raw += saving.raw_bytes
         shown += saving.shown_bytes
         spent += saving.tokens
+        carried += saving.carried
         counted += 1 if saving.tokens else 0
+        weighed_runs += 1 if saving.carried else 0
         cost = f"{saving.tokens:>8,}" if saving.tokens else f"{'—':>8}"
+        weight = f"{saving.carried:>9,}" if saving.carried else f"{'—':>9}"
         print(
             f"{saving.handle:8}  {saving.raw_bytes:>10,} B  {saving.shown_bytes:>8,} B"
-            f"  {saving.part:>5.1f}%  {saving.asks:>4}  {cost}  {' '.join(meta.command)}"
+            f"  {saving.part:>5.1f}%  {saving.asks:>4}  {weight}  {cost}"
+            f"  {' '.join(meta.command)}"
         )
 
     part = shown * 100 / raw if raw else 0.0
@@ -764,6 +768,25 @@ def _stats(args: list[str]) -> int:
         missing = len(found) - counted
         unsaid = f", {missing} not counted" if missing else ""
         print(f"cost {spent:,} tokens, as the endpoint counted them{unsaid}")
+
+    # And the number the question is really about. `cost` above is what the
+    # asking took; this is what the output would have taken, counted by the same
+    # tokenizer at the moment it was sent -- so the two are comparable, which is
+    # the whole reason for reading it off a reply instead of estimating it.
+    #
+    # It counts a little more than the capture: the lines went out numbered and
+    # with a question in front of them. That is said here rather than subtracted
+    # by guesswork, because a guess dressed as a measurement is the one thing
+    # this report has always refused. What the view itself weighs is not counted
+    # anywhere -- `test/kazanc.py` is what measures that, and it spends requests
+    # to do it.
+    if carried:
+        unweighed = len(found) - weighed_runs
+        unsaid = f", {unweighed} not counted" if unweighed else ""
+        print(
+            f"the output put to a model weighed {carried:,} tokens"
+            f" -- numbering and question included{unsaid}"
+        )
     return 0
 
 

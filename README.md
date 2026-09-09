@@ -244,10 +244,28 @@ slower, costs a request and is sometimes wrong. The model decides what cannot be
 computed, and nothing else.
 
 `sift stats` says what the shortening saved and what it cost, and keeps those
-two apart: the share is this tool's own arithmetic over bytes it holds, so it is
-exact, while the cost is the endpoint's count of its own tokens, so it is
-measured. A run the endpoint did not count is left out and said so, rather than
-filled in with bytes divided by four.
+apart because they are not the same kind of number. The share is this tool's own
+arithmetic over bytes it holds, so it is exact. The cost is the endpoint's count
+of its own tokens, so it is measured. And beside it now sits the number the
+question is really about — what the output weighed, counted by the same
+tokenizer at the moment it was sent:
+
+```
+$ sift stats
+handle    captured    shown  part  asks  weighed    cost  command
+9f2c41ab  62,003 B    450 B  0.7%     1   21,392   5,120  pytest -v
+
+1 run · 62,003 B captured · 450 B shown · 0.7% of it
+cost 5,120 tokens, as the endpoint counted them
+the output put to a model weighed 21,392 tokens -- numbering and question included
+```
+
+That last line is a little more than the capture alone, because the lines went
+out numbered with a question in front of them, and it says so rather than
+subtracting a guess. It also lets the report be unflattering: on a small
+command the asking costs more than the output ever weighed, and this is where
+you would see that. A run the endpoint did not count is a dash, left out of both
+totals rather than filled in with bytes divided by four.
 
 `--keep PATTERN` shows every line matching it whatever else was chosen and
 whatever the budget says. It is your pattern, not one this tool guessed at —
