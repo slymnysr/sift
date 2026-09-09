@@ -39,6 +39,19 @@ geldiğinde mutasyon bataryasına da bir satır düşer.
 Sıra rastgele değil: G1 en çok kişiye dokunan, G2–G4 istemci tarafını
 düzeltenler, G5–G8 aracın kendi eksikleri, G9–G10 projenin sağlığı.
 
+**Onu da bitti — 9 Eylül 2026, sürüm 1.1.0 ile yayında.** Biri (G3) ölçülüp
+reddedildi ve gerekçesi yazıldı; bir plan maddesinin doğru sonucu bazen
+"yapılmadı" olur.
+
+| | |
+|---|---|
+| Test | 638 → **688** |
+| Mutasyon kuralı | 182 → **195** |
+| Çapasız kural | 16 → **0** |
+| Korumasız kural | 6 → **0** |
+| PyPI | 1.0.2 → **1.1.0** |
+| Kayıt defteri | 1.0.2 → **1.1.0**, `isLatest` |
+
 ---
 
 ## G1 — Anahtar tek yol olmasın

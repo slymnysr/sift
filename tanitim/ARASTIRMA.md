@@ -207,7 +207,7 @@ duruyor, çünkü karar verilirse biçimi belli olsun:
 | GitHub topics | 0 | **12** |
 | GitHub release sayfası | 0 | **3** |
 | Depo açıklaması | "MCP" geçmiyor | **"MCP server and CLI…"** |
-| PyPI sürüm | 1.0.0 | **1.0.2** |
+| PyPI sürüm | 1.0.0 | **1.1.0** |
 | PyPI indirme | (ölçülmedi) | (ölçülmedi) |
 | Kayıt defteri | kayıtlı değil | **`io.github.slymnysr/sift`, active** |
 | GitHub MCP Registry | yok | kayıttan besleniyor — 13 Eyl'de bakılacak |
@@ -229,7 +229,7 @@ değil, bir taban çizgisi.
 
 | kanal | durum | not |
 |---|---|---|
-| Resmî kayıt defteri | **`active`, 1.0.2, isLatest** | Değişmedi |
+| Resmî kayıt defteri | **`active`, 1.1.0, isLatest** | İŞ2 biterken 1.1.0 yayınlandı; kayıt defteri iş akışı kendiliğinden güncelledi |
 | GitHub | 0 yıldız, 0 fork, 0 izleyen | Bir günlük |
 | **PyPI indirme** | **83** aynasız / 222 aynalı | Kırılımı aşağıda — 83'ün 75'i kurulum bile değil |
 | mcp.so [#4010](https://github.com/chatmcp/mcpso/issues/4010) | Açık, bakım cevabı yok | Tek yorum bizim düzeltmemiz |
