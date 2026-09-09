@@ -35,8 +35,8 @@ Her faz kendi başına bitmiş sayılır ve doğrulanabilir bir çıktısı vard
 | T2 | Resmî kayıt defteri | `server.json`, `registry.modelcontextprotocol.io`'da yayında | **bitti** (1.0.2) |
 | T3 | GitHub keşfedilebilirliği | topics, açıklama, sürüm notu | **bitti** |
 | T4 | Dizinler | mcp.so, PulseMCP, Glama, Smithery | **bitti** (2'si kayıt defterinden besleniyor) |
-| T5 | awesome-mcp-servers | PR açık | bekliyor |
-| T6 | README konumlandırma | Problem, insanların aradığı kelimelerle anılıyor | bekliyor |
+| T5 | awesome-mcp-servers | PR açık | **bitti** ([#14050](https://github.com/punkpeye/awesome-mcp-servers/pull/14050)) |
+| T6 | README konumlandırma | Problem, insanların aradığı kelimelerle anılıyor | **bitti** |
 | T7 | Sürekli araştırma | `ARASTIRMA.md` güncel, yeni kanallar izleniyor | sürekli |
 
 ---
@@ -124,9 +124,13 @@ matter." diye başlıyor — doğru ama **kimsenin aramadığı** bir cümle.
 İnsanların aradığı: *MCP token waste*, *tool output floods context*, *reduce
 Claude context usage*, *agent context window full*, *MCP token optimization*.
 
-Bu kelimeler README'de geçmiyor. Geçmeli — ama **abartmadan ve ölçümle**:
-elimizde 404 satır → 7 satır, %97,6 daha az token, 0 uydurma satır gibi
-gerçek sayılar var. Pazarlama dili değil, ölçüm dili.
+Bu kelimeler README'de geçmiyor. Geçmeli — ama **abartmadan ve ölçümle**.
+
+> **Düzeltme (9 Eylül, T6 yapılırken):** bu paragraf ilk yazıldığında
+> "404 satır → 7 satır, %97,6 daha az token" diyordu. O sayının kaydı yok:
+> `%97,6`, `notlar/26`'da **efor kıyasının kalite oranıydı**, token azalması
+> değil. Kendi planında uydurma sayı taşımak, bu planın son kuralını ihlal
+> ediyordu. Sayı ölçüldü ve yerine gerçeği kondu — `test/kazanc.py`.
 
 **Bitti sayılır:** README'nin ilk ekranı problemi arama terimleriyle adlandırıyor
 ve ölçülmüş bir sayı gösteriyor.

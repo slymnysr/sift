@@ -6,12 +6,20 @@ Runs your command, then gives the model only the lines that matter.
 
 A test suite prints 4,000 lines and eleven of them are the failure. A build
 prints a progress bar that redraws 900 times. An install lists every package it
-touched. All of it lands in the conversation, and — this is the part that costs
-— it is re-sent in full on every turn that follows.
+touched. All of it lands in the context window, and — this is the part that
+costs — it is re-sent in full on every turn that follows.
 
-`sift` runs the command itself, keeps every byte on disk, and hands the model a
-view: the failures, the summary, the lines a reader would actually stop on. The
-rest is marked, not deleted.
+`sift` is an MCP server and a command line for that problem. It runs the command
+itself, keeps every byte on disk, and hands the model a view: the failures, the
+summary, the lines a reader would actually stop on. The rest is marked, not
+deleted.
+
+Two numbers, both measured, both reproducible from this repository. Running this
+project's own test suite prints 652 lines — 21,392 tokens, as the model's own
+tokenizer counts them. What comes back is 8 lines and 208 tokens: **99% fewer**
+(`python test/kazanc.py`). Removing almost everything is the easy half. Over a
+22-sample corpus of real build and test output, the default budget keeps **138
+of the 140 lines a reader could not do without** (`python test/budget.py`).
 
 ```
 $ sift run -- pytest
