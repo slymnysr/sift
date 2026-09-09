@@ -876,6 +876,21 @@ MUTATIONS = [
         '    return f" · kept the first {meta.byte_count:,} bytes of it"',
         '    return ""',
     ),
+    # -- G7: ending a tree where there are no process groups -----------------
+    #
+    # Only half of this phase can be checked from here, and the other half is
+    # deliberately not listed. What runs everywhere is that the Windows-only code
+    # stays inert everywhere else, and that is below. Whether a job object really
+    # ends a tree is a claim about Windows: on Linux `jobs.end` answers False, so
+    # a mutation of the line that calls it would behave identically and escape
+    # every time. A rule this battery cannot break is a rule it must not claim to
+    # guard -- what guards that one is the Windows leg of CI.
+    Mutation(
+        "jobs.py",
+        "the job-object path stays out of the way on every other platform",
+        '    return sys.platform == "win32"',
+        "    return True",
+    ),
     # -- Faz 25: offering it, and writing into somebody else's file ----------
     Mutation(
         "hook.py",

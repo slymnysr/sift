@@ -21,11 +21,12 @@ import signal
 import subprocess
 import sys
 import time
+import uuid
 from pathlib import Path
 
 import pytest
 
-from sift import background, store, view, watch
+from sift import background, jobs, store, view, watch
 from test_distill import _Judge
 
 SLEEPER = "import time; time.sleep(30)"
@@ -369,7 +370,6 @@ def test_stopping_a_run_ends_it_and_writes_down_that_it_was_ended():
     assert not background.alive(started)
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="no process groups to end there")
 def test_stopping_a_run_ends_what_the_command_itself_started(tmp_path):
     """The reason the supervisor and the command share one process group.
 
@@ -377,6 +377,10 @@ def test_stopping_a_run_ends_what_the_command_itself_started(tmp_path):
     only the process named on the command line leaves those running, writing to
     a file nobody is reading -- so the proof is a grandchild that goes on
     writing until something stops it, and the check is that it stopped.
+
+    Not skipped on Windows since G7. There is no process group there, so the
+    tree is put in a job object instead and `stop` ends that -- and this test,
+    which reads a file rather than a process table, is the same test either way.
     """
     ticking = tmp_path / "ticking"
     child = tmp_path / "child.py"
@@ -658,3 +662,44 @@ def test_nothing_before_the_first_new_line_is_marked_as_missing(monkeypatch):
 
     assert "900 lines not shown" not in built.text
     assert "899 lines not shown" not in built.text
+
+
+# -- the Windows half of "and everything it started" -------------------------
+
+
+def test_the_job_object_path_is_inert_where_there_are_process_groups():
+    """POSIX has a group and wants no job. None of this may cost it anything.
+
+    Every function in `jobs` is called on every platform -- `stop` asks before
+    it signals, `run` asks before it starts -- so the cheapest way for this to
+    break the tool everywhere is for the Windows-only code to run anywhere else.
+    `ctypes.WinDLL` does not exist on Linux at all: reaching it is not a wrong
+    answer, it is an `AttributeError` in the middle of ending a run.
+    """
+    if sys.platform == "win32":
+        pytest.skip("bu iddia POSIX hakkinda")
+
+    assert not jobs.usable()
+    assert jobs.hold("abc12345") is None
+    assert jobs.end("abc12345") is False
+    jobs.close(None)  # and this must not raise either
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="job objects are a Windows thing")
+def test_a_job_can_be_made_and_ended_on_windows():
+    """Teeth for the test above: the mechanism has to exist somewhere.
+
+    Held, ended, let go, and then asked for again -- the last one answers False
+    because a job object lives only while a handle to it is open, which is why
+    the supervisor holds one for as long as the run lasts.
+    """
+    handle = "t" + uuid.uuid4().hex[:7]
+
+    job = jobs.hold(handle)
+    assert job is not None, "is nesnesi yapilamadi"
+    try:
+        assert jobs.end(handle) is True, "adiyla acilip bitirilemedi"
+    finally:
+        jobs.close(job)
+
+    assert jobs.end(handle) is False, "kimse tutmuyorken ad hala duruyor"

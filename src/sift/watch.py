@@ -31,7 +31,7 @@ import signal
 import subprocess
 import sys
 
-from sift import store
+from sift import jobs, store
 
 _USAGE = "usage: python -m sift.watch <handle> <started_at> <shell|noshell> <cwd> -- command..."
 
@@ -79,6 +79,10 @@ def watch(
     # alive to care.
     sink = open(target, "ab")  # noqa: SIM115 -- the command writes through this; closed below
     try:
+        # Made before the command starts, so that nothing it spawns in its first
+        # milliseconds is outside it. On anything but Windows this is None and
+        # the process group does the same work.
+        job = jobs.hold(handle)
         proc = subprocess.Popen(
             " ".join(command) if shell else command,
             stdout=sink,
@@ -87,6 +91,7 @@ def watch(
             cwd=cwd or None,
             shell=shell,
         )
+        jobs.joined(job, proc.pid)
     except OSError:
         # Nobody to raise at. This process is the only one that knows the
         # command never started, and a handle left marked running is worse than

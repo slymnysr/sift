@@ -34,7 +34,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO
 
-from sift import store
+from sift import jobs, store
 
 _READ_CHUNK = 64 * 1024
 
@@ -117,6 +117,10 @@ def run(
     popen_command: Sequence[str] | str = " ".join(argv) if shell else argv
     timed_out = False
     exit_code: int | None = None
+    # Made before the command starts, so nothing it spawns in its first
+    # milliseconds is outside it. None everywhere but Windows, where it is the
+    # only thing a timeout can use to reach the command's children.
+    job = jobs.hold(handle)
 
     sink = _Sink(
         open(target, "wb"),  # noqa: SIM115 -- the pump closes this; see below
@@ -160,13 +164,14 @@ def run(
         exit_code = proc.wait(timeout=timeout)
     except subprocess.TimeoutExpired:
         timed_out = True
-        _stop(proc)
+        _stop(proc, handle)
         with contextlib.suppress(subprocess.TimeoutExpired):
             proc.wait(timeout=5)
         exit_code = None
     finally:
         stop.set()
         pump.join(timeout=_DRAIN_GRACE)
+        jobs.close(job)
 
     meta = store.Meta(
         handle=handle,
@@ -345,11 +350,19 @@ def _new_session() -> dict[str, object]:
     return {"start_new_session": True}
 
 
-def _stop(proc: subprocess.Popen) -> None:
-    """End a run that overstayed, the whole tree of it where the platform allows."""
+def _stop(proc: subprocess.Popen, handle: str) -> None:
+    """End a run that overstayed, the whole tree of it.
+
+    Two mechanisms for one sentence. A process group is what POSIX has; a job
+    object is what Windows has, and until it was used here a timeout on Windows
+    ended the process named on the command line and left its children running --
+    writing into a pipe nobody was reading, which is the exact failure the group
+    exists to prevent everywhere else.
+    """
     try:
         if sys.platform == "win32":
-            proc.kill()
+            if not jobs.end(handle):
+                proc.kill()
         else:
             os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
     except (ProcessLookupError, PermissionError, OSError):

@@ -205,16 +205,39 @@ def _alive(token: str) -> list[str]:
     meaning, and being unique to one run it also cannot match a process some
     other test -- or some other person on this machine -- happens to be running.
     """
-    found = subprocess.run(
-        ["pgrep", "-f", token], capture_output=True, text=True, check=False
-    )
+    if sys.platform == "win32":
+        # There is no `pgrep` there, and `tasklist` does not show command lines.
+        # Asking WMI is slower and it is the only thing that can answer the
+        # question this test is actually asking: is a process carrying this
+        # token still running.
+        found = subprocess.run(
+            [
+                "powershell.exe",
+                "-NoProfile",
+                "-Command",
+                "Get-CimInstance Win32_Process |"
+                f" Where-Object {{ $_.CommandLine -like '*{token}*' }} |"
+                " ForEach-Object { $_.ProcessId }",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    else:
+        found = subprocess.run(
+            ["pgrep", "-f", token], capture_output=True, text=True, check=False
+        )
     return [pid for pid in found.stdout.split() if pid.strip()]
 
 
 def test_a_timeout_kills_the_children_the_command_started(tmp_path):
-    """Killing only the parent leaves orphans writing into a pipe nobody reads."""
-    if sys.platform == "win32":
-        pytest.skip("Windows'ta surec grubu bu anlamda yok")
+    """Killing only the parent leaves orphans writing into a pipe nobody reads.
+
+    Run on Windows as well since G7. It was skipped there for as long as a
+    timeout could only reach the process it started; a job object is what
+    Windows has instead of a process group, and this is the test that says
+    whether it works.
+    """
     token = uuid.uuid4().hex
     script = tmp_path / "agac.py"
     script.write_text(_TREE, encoding="utf-8")
@@ -230,9 +253,10 @@ def test_a_timeout_kills_the_children_the_command_started(tmp_path):
         assert marker.read_text(encoding="utf-8") == token, "torun surec hic baslamadi"
         assert not _alive(token), "cocuk surecler timeout'tan sagi cikti"
     finally:
+        hard = getattr(signal, "SIGKILL", signal.SIGTERM)  # Windows'ta SIGKILL yok
         for pid in _alive(token):  # bu testin artigi baska kosumu bogmasin
             with contextlib.suppress(OSError, ValueError):
-                os.kill(int(pid), signal.SIGKILL)
+                os.kill(int(pid), hard)
 
 
 # The same shape, except the grandchild steps into a session of its own. Nothing

@@ -38,8 +38,8 @@ import time
 from collections.abc import Sequence
 from pathlib import Path
 
+from sift import jobs, store
 from sift import lines as text_lines
-from sift import store
 
 # How long a command gets to end politely before it is ended for it.
 GRACE = 5.0
@@ -353,11 +353,22 @@ def _end(running: store.Running) -> int | None:
 
     The signal goes to the group rather than to the process. The supervisor and
     the command share one, along with everything the command started.
+
+    Windows has no such group, so the tree lives in a job object instead and
+    ending that is what reaches the command's children. The supervisor is
+    deliberately left outside the job: it survives this, watches the command go,
+    and writes the ending itself. Signalling it instead would be worse than
+    useless there -- `SIGTERM` on Windows is `TerminateProcess`, so the one
+    process that could record how the run came out would be killed before it
+    could, which is exactly what used to happen.
     """
     if not alive(running):
         return None
 
-    _signal(running.pid, signal.SIGTERM)  # to the group: `ours` has vouched for it
+    # False everywhere but Windows, and on Windows for a run started before jobs
+    # existed. Either way the line below is what happens instead.
+    if not jobs.end(running.handle):
+        _signal(running.pid, signal.SIGTERM)  # to the group: `ours` vouched for it
     deadline = store.now() + GRACE
     while store.now() < deadline:
         if store.meta_path(running.handle).is_file():
@@ -391,9 +402,10 @@ def _signal(pid: int, number: int) -> None:
 
     try:
         if sys.platform == "win32":
-            # Windows has no process group to end in this sense, so only the
-            # supervisor is stopped and whatever the command spawned is left
-            # behind: the same honest limit `capture` records for a timeout.
+            # The job has already ended the tree if there was one; this ends the
+            # supervisor, which is not in it. A run started before jobs existed,
+            # or one whose supervisor is gone, has no job -- and then this line
+            # is the whole of what Windows can do, as it always was.
             os.kill(pid, number)
         else:
             group = os.getpgid(pid)
