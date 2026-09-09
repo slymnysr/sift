@@ -3,7 +3,7 @@
 Bu dosya İŞ 1'in hafızası. Her yeni bulgu, her ret, her ölçüm buraya yazılır.
 Amacı altı ay sonra "bunu denemiş miydik" sorusunu cevaplamak.
 
-**Son güncelleme:** 9 Eylül 2026 (İŞ1 bitti — T1–T7)
+**Son güncelleme:** 9 Eylül 2026 akşamı (İŞ2 biterken erken kontrol)
 
 ---
 
@@ -220,6 +220,69 @@ duruyor, çünkü karar verilirse biçimi belli olsun:
 awesome-mcp-servers) — dördü hâlâ tarama bekliyor.
 
 Sonraki ölçümler buraya eklenecek.
+
+### Erken kontrol — 9 Eylül 2026 akşamı
+
+Liste 13 Eylül için yazılmıştı; İŞ2 biterken dört gün erken bakıldı. **Dizin
+taramaları henüz gelmemiş olabilir**, o yüzden aşağıdaki "yok"lar bir sonuç
+değil, bir taban çizgisi.
+
+| kanal | durum | not |
+|---|---|---|
+| Resmî kayıt defteri | **`active`, 1.0.2, isLatest** | Değişmedi |
+| GitHub | 0 yıldız, 0 fork, 0 izleyen | Bir günlük |
+| **PyPI indirme** | **83** aynasız / 222 aynalı | Kırılımı aşağıda — 83'ün 75'i kurulum bile değil |
+| mcp.so [#4010](https://github.com/chatmcp/mcpso/issues/4010) | Açık, bakım cevabı yok | Tek yorum bizim düzeltmemiz |
+| awesome-mcp-servers [#14050](https://github.com/punkpeye/awesome-mcp-servers/pull/14050) | **Açık ve engellenmiş** | Aşağıda |
+| PulseMCP API | `sift` dönmüyor | Gönderim zaten durdurulmuş |
+| Glama | **API anahtarı istiyor** | Programla bakılamıyor |
+| `github.com/mcp` | Sayfa JavaScript'le çiziliyor | Buradan doğrulanamadı |
+
+### "83 indirme" ne değil
+
+PyPI'ın indirme dediği şey bir **HTTP isteği**, bir kurulum değil. Gerçek bir
+`pip`/`uv` kurulumu kendini tanıtır: User-Agent'ında Python sürümünü ve
+işletim sistemini söyler. Ölçülen kırılım:
+
+| | |
+|---|---|
+| Aynalar dahil | 222 |
+| Aynalar hariç | 83 |
+| Python sürümü bildirilmeyen | **75** |
+| Bir kurucudan gelen | **8** (Linux; 3.12'den 6, 3.14'ten 1, 3.9'dan 1) |
+
+75 istek hiçbir şey söylemiyor — bot, tarayıcı, güvenlik taraması ya da düz bir
+çekim. Kalan 8'in bir kısmı da bizim: kayıt defterindeki komut doğrulanırken
+bu makineden `uvx` çalıştırıldı (Linux, 3.12). Ve **3.9'dan gelen istek hiç
+kuramaz**, çünkü paket 3.12 istiyor — yani o bir kullanıcı değil, sürüm çözen
+bir otomat.
+
+Sonuç: bir günlük pakette gerçek kullanıcı pratik olarak sıfır. Bu bir sinyal
+değil, taban çizgisi — ve çıplak "83" yazmak onu sinyal gibi gösterirdi.
+
+Kaynak: `pypistats.org/api/packages/sift-cli/{recent,overall,python_minor,system}`.
+
+### awesome-mcp-servers artık Glama'ya bağlı — beklenmedik kapı
+
+PR'a bir robot yorum düştü ve şart açık:
+
+> 1. **Ensure your server is listed on Glama.** ... note: you must add Dockerfile
+>    directly to Glama. For checks to pass, we only need the server to start and
+>    respond to introspection requests.
+> 2. **Update your PR** by adding a Glama score badge after the server description.
+
+Yani T5, T4'ün bir parçasına bağımlı hâle geldi: **Glama listesi olmadan PR
+birleşmiyor.** Ve Glama'ya elle gönderim GitHub OAuth istiyor — tarayıcı, yani
+kullanıcının kendi eylemi.
+
+Bir de şu var, ve karar kullanıcının: Glama'nın denetimi bir **Dockerfile**
+istiyor. `BULGULAR.md` §C'de Docker imajı elenmişti — ama oradaki gerekçe
+*dağıtım* hakkındaydı ("sift'in işi bu makinedeki komutu çalıştırmak;
+konteynerde yanlış makinenin çıktısını verir"). Glama'nınki dağıtım değil, bir
+duman testi: sunucu ayağa kalkıyor ve `tools/list`'e cevap veriyor mu. İkisi
+farklı sorular, ve ikincisine "evet" demek birincisini geri almıyor.
+
+**Yapılmadı.** İkisi de kullanıcının tarayıcısını ve kararını istiyor.
 
 ### 13 Eylül 2026'da bakılacaklar
 

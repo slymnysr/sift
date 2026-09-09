@@ -83,14 +83,13 @@ class Mutation:
 # Split across adjacent literals only to stay inside the line limit: what they
 # join into has to match the source byte for byte.
 _POST_CALL = "            return self._post("
-_POST_ARGS = "url=url, headers=headers, body=body, timeout=self.timeout)\n"
+_POST_ARGS = "url=url, headers=headers, body=body, timeout=timeout)\n"
 _REACH_GUARDED = (
     "        try:\n"
     + _POST_CALL
     + _POST_ARGS
-    + "        except OSError as exc:"
-    + "  # a transport of one's own is allowed to be less careful\n"
-    + '            return Reply(0, str(exc).encode("utf-8", "replace"))\n'
+    + "        except TimeoutError as exc:\n"
+    + '            return Reply(0, str(exc).encode("utf-8", "replace"), timed_out=True)\n'
 )
 _REACH_BARE = "        return self._post(" + _POST_ARGS
 
@@ -118,8 +117,12 @@ MUTATIONS = [
     Mutation(
         "capture.py",
         "a run is marked complete only once it has finished",
-        "    store.finish(meta)\n    return Capture(meta)",
-        "    return Capture(meta)",
+        # `cwd` tells the two `finish` calls apart: `keep` records the working
+        # directory plainly, this one resolves the one it was given.
+        '        cwd=str(Path(cwd).resolve()) if cwd else os.getcwd(),\n'
+        "        capped=sink.capped,\n    )\n    store.finish(meta)",
+        '        cwd=str(Path(cwd).resolve()) if cwd else os.getcwd(),\n'
+        "        capped=sink.capped,\n    )",
     ),
     Mutation(
         "store.py",
@@ -136,11 +139,11 @@ MUTATIONS = [
     # -- Faz 2: model bridge -------------------------------------------------
     Mutation(
         "model.py",
-        "the largest model is asked first",
-        '    "nvidia/nemotron-3-ultra-550b-a55b",  # flagship: asked first, always\n'
-        '    "nvidia/nemotron-3-super-120b-a12b",\n',
+        "the ladder is asked in the order it is written",
         '    "nvidia/nemotron-3-super-120b-a12b",\n'
-        '    "nvidia/nemotron-3-ultra-550b-a55b",  # flagship: asked first, always\n',
+        '    "nvidia/nemotron-3.5-lightning-30b-a3b",\n',
+        '    "nvidia/nemotron-3.5-lightning-30b-a3b",\n'
+        '    "nvidia/nemotron-3-super-120b-a12b",\n',
     ),
     Mutation(
         "model.py",
@@ -152,7 +155,7 @@ MUTATIONS = [
         "model.py",
         "a rejected key ends the walk instead of touring the ladder",
         '                    self.last_error = f"key rejected ({reply.status})"\n'
-        "                    return None\n",
+        "                    return None, False\n",
         '                    self.last_error = f"key rejected ({reply.status})"\n'
         "                    break\n",
     ),
@@ -207,8 +210,8 @@ MUTATIONS = [
     Mutation(
         "model.py",
         "nothing is added to the prompt on the way out",
-        '                    "stream": False,\n',
-        '                    "stream": False,\n                    "user": os.getcwd(),\n',
+        '        "stream": False,\n',
+        '        "stream": False,\n        "user": os.getcwd(),\n',
     ),
     # -- Faz 3: distillation -------------------------------------------------
     Mutation(
@@ -274,8 +277,12 @@ MUTATIONS = [
     Mutation(
         "distill.py",
         "the view is built from the capture and from nothing else",
-        "        text=render(lines, chosen, handle, first),",
-        "        text=render(lines, chosen, handle, first) + answer.text,",
+        # The line that follows tells this apart from the same call in `_seen`,
+        # which builds a remembered view and counts no asks.
+        "        text=render(lines, chosen, handle, first, unit),\n"
+        "        kept=len(chosen),\n        total=len(lines),\n        model=model,",
+        "        text=render(lines, chosen, handle, first, unit) + str(chosen),\n"
+        "        kept=len(chosen),\n        total=len(lines),\n        model=model,",
     ),
     # -- Faz 4: the safety net -----------------------------------------------
     Mutation(
@@ -395,7 +402,7 @@ MUTATIONS = [
     Mutation(
         "outline.py",
         "a file is read as bytes, so nothing rewrites its line endings",
-        '    return text_lines.of(Path(path).read_bytes().decode("utf-8", errors="replace"))',
+        '    return Path(path).read_bytes().decode("utf-8", errors="replace")',
         '    return text_lines.of(Path(path).read_text(errors="replace"))',
     ),
     Mutation(
@@ -422,7 +429,7 @@ MUTATIONS = [
     Mutation(
         "cli.py",
         "a file that cannot be read is reported, not raised at the user",
-        "        view, who = best_outline(path, budget, keep)\n"
+        "        view, who = best_outline(path, budget, keep, name=named)\n"
         "    except OSError as exc:  # the file itself cannot be read; there is no view",
         "        view, who = best_outline(path, budget, keep)\n"
         "    except ValueError as exc:  # the file itself cannot be read; there is no view",
@@ -430,7 +437,7 @@ MUTATIONS = [
     Mutation(
         "view.py",
         "an outline nobody chose falls to the ends of the file, not to an error",
-        '    return ends_of(path), f"no model ({reason})"',
+        '    return ends_of(path, name), f"no model ({reason})"',
         "    raise RuntimeError(reason)",
     ),
     # -- Faz 7: the server, and everything stderr used to carry --------------
@@ -465,10 +472,12 @@ MUTATIONS = [
     Mutation(
         "server.py",
         "a command that cannot even be started comes back as a sentence too",
-        "    except OSError as exc:\n"
-        '        return f"sift: {exc}"\n'
-        "    view, who = best_view(capture, BUDGET if budget is None else budget, keep)\n",
-        "    except OSError:\n        raise\n    view, who = best_view(capture)\n",
+        "        except OSError as exc:\n"
+        '            return f"sift: {exc}"\n'
+        "        view, who = best_view("
+        "capture, BUDGET if budget is None else budget, keep)\n",
+        "        except OSError:\n            raise\n"
+        "        view, who = best_view(capture)\n",
     ),
     Mutation(
         "server.py",
@@ -618,7 +627,7 @@ MUTATIONS = [
     Mutation(
         "view.py",
         "the reader is told when part of the capture was never looked at",
-        '        f" · {who} · {meta.duration_s:.1f}s" + silence(view)',
+        '        f" · {who} · {meta.duration_s:.1f}s" + kept(meta) + silence(view)',
         '        f" · {who} · {meta.duration_s:.1f}s"',
     ),
     Mutation(
@@ -850,7 +859,7 @@ MUTATIONS = [
         "            block = source.read(_READ_CHUNK)\n"
         "            if not block:\n"
         "                break\n"
-        "            sink.write(block)",
+        "            kept.write(block)",
         "        sink.write(source.read(_READ_CHUNK))",
     ),
     # -- G6: the ceiling, and what it may not cost ---------------------------
@@ -980,7 +989,9 @@ MUTATIONS = [
     Mutation(
         "model.py",
         "the effort setting reaches the request",
+        '    written = os.environ.get("SIFT_EFFORT", "").strip().lower()\n'
         "    return written or None",
+        '    written = os.environ.get("SIFT_EFFORT", "").strip().lower()\n'
         "    return None",
     ),
     Mutation(
@@ -1186,14 +1197,16 @@ MUTATIONS = [
     Mutation(
         "__init__.py",
         "the published version is the one the package reports",
-        '__version__ = "1.0.0"',
+        # This anchor moves with every release, and the battery says NO ANCHOR
+        # when it is forgotten -- which is how it was found, three releases late.
+        '__version__ = "1.0.2"',
         '__version__ = "0.9.0"',
     ),
     # -- Faz 12: the caller's own say ------------------------------------------
     Mutation(
         "distill.py",
         "a line the caller asked for is shown",
-        "    chosen |= always",
+        "    chosen = chosen | always",
         "    chosen |= set()",
     ),
     Mutation(
@@ -1236,7 +1249,7 @@ MUTATIONS = [
     Mutation(
         "digest.py",
         "a digest is handled by its path, so peek takes it back",
-        "        str(path),\n        bridge,",
+        "        labelled,\n        bridge,\n        budget=ceiling,",
         '        "",\n        bridge,',
     ),
     Mutation(

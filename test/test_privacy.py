@@ -178,3 +178,31 @@ def test_a_view_built_with_sending_off_says_so_rather_than_claiming_a_model(monk
 
     assert built.model is None
     assert "switched off" in who
+
+
+def test_only_the_secret_is_replaced_and_the_line_around_it_survives():
+    """Masking is a replacement, not a deletion.
+
+    A line reduced to the word `REDACTED` is a line the model cannot use: what
+    was being fetched, which header carried it, what came after -- all of that
+    is the context the question is about, and none of it is the secret. Every
+    test here checked that the secret was gone; none checked that anything else
+    was still there, and the mutation battery said so.
+    """
+    # The words have to sit *inside the match* for this to mean anything. A
+    # first version of this test kept its landmarks outside it -- `re.sub`
+    # replaces only what matched, so they survived either way and the mutation
+    # walked past. `bearer` and the scheme of a connection string are inside.
+    line = f"Authorization: Bearer {SECRET} -> 401"
+    linked = "postgres://reader:hunter2000@db.internal:5432/app"
+
+    masked = privacy.mask(line)
+    masked_link = privacy.mask(linked)
+
+    assert SECRET not in masked
+    assert privacy.REDACTED in masked
+    assert "Bearer" in masked, "eslesmenin icindeki sema adi da silinmis"
+
+    assert "hunter2000" not in masked_link
+    assert "postgres://reader:" in masked_link, "kullanici ve sema da silinmis"
+    assert "@db.internal" in masked_link, "sunucu adi da silinmis"

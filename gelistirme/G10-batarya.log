@@ -1,0 +1,200 @@
+baseline  681 passed, 2 skipped in 67.58s (0:01:07)
+
+caught     a timeout ends the whole tree, not just the process it started
+caught     a stranger holding the pipe cannot hold the run open
+caught     a byte that is not utf-8 does not stop the capture
+NO ANCHOR  a run is marked complete only once it has finished  (2 matches in capture.py)
+caught     the same command run twice gets two handles
+caught     a range past the end is clamped, not refused
+NO ANCHOR  the largest model is asked first  (0 matches in model.py)
+caught     no key means nothing is sent at all
+NO ANCHOR  a rejected key ends the walk instead of touring the ladder  (0 matches in model.py)
+caught     a busy rung is given a second chance before it is left behind
+caught     an unreachable endpoint does not cost the flagship
+NO ANCHOR  a transport that raises is turned into an unreachable reply  (0 matches in model.py)
+caught     an empty answer counts as no answer
+caught     the environment beats the stored key file
+NO ANCHOR  nothing is added to the prompt on the way out  (0 matches in model.py)
+caught     a number past the end of the capture is dropped, not merely unprintable
+caught     there is no line before the first one
+caught     every piece is numbered as part of the whole capture
+caught     the numbering starts where the caller said it starts
+caught     a capture too long for one ask is split
+caught     an answer with no numbers in it is no answer
+caught     lines folded away before a shown one are marked
+caught     lines folded away after the last shown one are marked
+caught     a line too wide to judge is shortened before it is asked about
+caught     a gap is written the way the README says it is written
+NO ANCHOR  the view is built from the capture and from nothing else  (0 matches in distill.py)
+caught     the ends are shown, and no claim is made about the middle
+caught     a capture shorter than the ends asked for is shown whole
+caught     a run that failed gets more of its ending
+caught     a view nobody chose does not claim a model chose it
+caught     a handle that was never captured is not an empty capture
+caught     the command's own exit code comes back out
+caught     a run stopped for taking too long is reported the way a shell reports it
+caught     a bug in the distiller costs the view and nothing else
+caught     a command that cannot be run is reported, not raised at the user
+caught     the view goes to stdout and the note about it goes to stderr
+caught     when everything that chooses lines fails, every line is shown
+caught     the last resort shows the capture rather than announcing it
+caught     a flag is only a flag at the front, before the command begins
+caught     a line ends at a newline and at nothing else
+caught     a trailing newline ends the last line rather than starting another
+caught     a carriage return before a newline belongs to the ending
+caught     a capture is read as bytes, so nothing rewrites its line endings
+NO ANCHOR  a file is read as bytes, so nothing rewrites its line endings  (0 matches in outline.py)
+caught     the outline is asked about the file and never about its name
+caught     the question put to the model is the one the caller asked
+caught     a capture is answered by the store, whatever the working directory holds
+NO ANCHOR  a file that cannot be read is reported, not raised at the user  (0 matches in cli.py)
+NO ANCHOR  an outline nobody chose falls to the ends of the file, not to an error  (0 matches in view.py)
+caught     the note about a view travels inside the result, because there is no stderr
+caught     one note serves both front ends, so neither can drift from the other
+caught     a command line written by a client is a command line, pipes and all
+caught     a file that cannot be read comes back as a sentence, not as a stack
+NO ANCHOR  a command that cannot even be started comes back as a sentence too  (0 matches in server.py)
+caught     every tool on offer is named in the instructions the calling model reads
+caught     a budget is divided between the asks, not repeated to each of them
+caught     a share of the budget never falls to nothing
+caught     the budget reaches the model rather than only the docstring
+caught     every prompt ends with the one way of answering
+caught     an answer longer than the budget is handed back
+caught     the second pass is shown the lines it chose, with the numbers they had
+caught     the second pass asks a different question from the first
+caught     narrowing can drop a line and can never add one
+caught     a round nobody answered leaves the answer before it standing
+caught     narrowing stops once it stops shortening anything
+caught     an answer is handed back a fixed number of times and no more
+caught     an outline is given the budget this module states, not the one distilling uses
+caught     the bill is for the view, against what the capture would have cost
+caught     what is written down is the size of the view that was handed over
+caught     bookkeeping that cannot be written costs the report and nothing else
+caught     a capture nobody viewed is left out rather than counted as free
+caught     the report adds up the bytes the views actually cost
+caught     the pieces of one capture are asked about at the same time
+caught     how many are asked at once is what the caller asked for
+caught     how many at once never falls below one
+caught     a question that came back with nothing is counted
+caught     the count of silent questions leaves the function it was counted in
+NO ANCHOR  the reader is told when part of the capture was never looked at  (0 matches in view.py)
+caught     silence is only reported when there was some
+caught     the bill keeps the questions that came back with nothing
+caught     a sample nobody answered for is left out of the row rather than scored
+caught     the row counts the samples it was actually able to use
+caught     a line lost with and without a ceiling is not charged to the ceiling
+caught     with no unbounded row to compare against, every miss is the ceiling's
+caught     a record is a slice of the source, never a value written back
+caught     a document that goes on after the array is not an array
+caught     one record is not a choice between records
+caught     a gap says what it is counting
+caught     a run still marked running is never swept
+caught     a capture whose age is unknown is not deleted on a guess
+caught     what a removed capture ran is removed with it
+caught     a swept handle is answered differently from one that never existed
+caught     an answer already given is not bought a second time
+caught     the question is part of what an answer is an answer to
+caught     the ceiling is part of what an answer is an answer to
+caught     an answer is old when nothing wants it, not when it was written
+caught     a view that cost no question says it was remembered
+caught     what an ask cost is read from the reply, never worked out from bytes
+caught     a reply that did not count is zero, not an estimate
+caught     a second pass is a second request and is counted
+caught     a run nobody counted is left out of the total rather than filled in
+caught     a server with no key declines instead of answering worse
+caught     switching the model off on purpose is not the same as forgetting a key
+caught     a terminal with no key is told so, loudly
+caught     an endpoint of one's own counts as somewhere to ask
+caught     a question with no key carries no authorization header
+caught     a blank address is not an address
+caught     the tool that runs arbitrary commands is not marked read-only
+caught     only the tool that asks nobody says it stays on this machine
+caught     a long command tells the client it is still going
+caught     a heartbeat that fails costs nothing
+caught     what arrives on a pipe is kept, and the marker names where
+NO ANCHOR  a stream is read to its end, not to its first block  (0 matches in capture.py)
+caught     keeping stops at the ceiling
+caught     a ceiling nobody asked for is the one that ships
+caught     a run that hit the ceiling says so where it will be read
+caught     the job-object path stays out of the way on every other platform
+caught     the weight is read from the reply, not guessed
+caught     narrowing does not count the capture a second time
+caught     a run whose weight nobody counted is a dash, not a zero
+caught     the lock is kept rather than ignored
+caught     installing adds to what is there rather than replacing it
+caught     a settings shape this does not recognise is refused, not reshaped
+caught     the offer is made once and then never again
+caught     nobody is installed over without being asked
+caught     a missing extra is answered with the command that fixes it
+caught     the offer waits until there is not a key to fetch first
+caught     a rung that ran out of time is not asked again
+caught     the flagship is not on the ladder, because it queues
+caught     an endpoint that will not take the effort field is asked without it
+NO ANCHOR  the effort setting reaches the request  (2 matches in model.py)
+caught     a ladder that ran out of time is walked again with patience
+caught     patience is spent on a queue and on nothing else
+caught     a pid this tool did not start is never signalled
+caught     signalling refuses a pid that is a broadcast rather than a tree
+caught     signalling refuses a process group that is a broadcast
+caught     our supervisor leads its own session; a reused pid does not
+caught     a supervisor that has exited is not still watching
+caught     a slice ends at the last newline that arrived
+caught     the numbering carries on from where the reader stopped
+caught     a reader is never handed the same line twice
+caught     a run nobody could signal is closed rather than left open
+caught     a run that had already finished keeps the ending it had
+caught     a launched run has a capture from the moment it has a handle
+caught     the ending is written before the marker comes down
+caught     a command that could not start is recorded, not left running
+caught     the supervisor adds to a capture rather than starting it over
+caught     nothing new is an answer, and it costs nothing to give
+caught     lines a model read and chose none of are folded, not replaced
+caught     a supervisor that is gone is called lost, not running
+ESCAPED    a follow reports the numbers the capture uses  (681 passed, 2 skipped in 67.42s (0:01:07))
+caught     the ends of a slice are numbered where the slice sits
+caught     a background run refuses a timeout rather than dropping it
+caught     what is still running is listed
+caught     a credential is replaced before the question is sent
+caught     masking is on unless it is switched off
+caught     a switch that says do not send is obeyed
+ESCAPED    the surrounding text survives so the reader can see what was hidden  (681 passed, 2 skipped in 66.20s (0:01:06))
+caught     the text a model is shown is masked
+caught     a secret is masked before the line is shortened
+caught     nothing is sent when sending is switched off
+caught     publishing happens on a tag and nowhere else
+NO ANCHOR  the published version is the one the package reports  (0 matches in __init__.py)
+NO ANCHOR  a line the caller asked for is shown  (0 matches in distill.py)
+caught     a pattern that matched is an answer even when nobody replied
+ESCAPED    a pattern that will not compile is searched for as text  (681 passed, 2 skipped in 66.24s (0:01:06))
+caught     a kept pattern is looked for anywhere in the line
+ESCAPED    the pattern the caller typed is the pattern that is used  (681 passed, 2 skipped in 67.36s (0:01:07))
+caught     a command runs where the caller said
+caught     a digest asks what happened, not what is declared
+NO ANCHOR  a digest is handled by its path, so peek takes it back  (0 matches in digest.py)
+caught     a bug in the digester costs the view and nothing else
+caught     a search shows the lines around what it matched
+caught     a search that finds nothing returns nothing
+caught     a pattern that will not compile is searched for as text
+caught     a search is capped, so a pattern matching everything cannot answer with everything
+caught     a search says how many lines matched, not only how many it shows
+ESCAPED    every ask passes through the one ceiling  (681 passed, 2 skipped in 65.89s (0:01:05))
+caught     answers come back in the order the questions were asked
+caught     waiting ends as soon as something is said
+caught     a run that has already finished is not waited for
+caught     one unreadable file does not take the others with it
+caught     following everything answers about every run
+caught     a command that has failed every time it was run here is named
+caught     a memory narrows to what was asked about
+ESCAPED    runs of the same command are counted together  (681 passed, 2 skipped in 66.06s (0:01:06))
+caught     a memory with nothing in it says so rather than printing nothing
+caught     whether a tool is here is asked of the machine, not assumed
+caught     a name that is not one of them is refused
+caught     a tool this machine does not have says what it is called
+caught     everything is routed; nothing decides what looks noisy
+caught     a bug underneath leaves the shell exactly as it was
+caught     an event of a shape nobody expected is carried on from
+caught     the gate can be switched off
+caught     the server can be started by the package's own name
+
+173/195 caught
+An escaped mutation means that rule is unguarded, not that it is unimportant.

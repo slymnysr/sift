@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 import sys
 import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -614,7 +615,10 @@ def test_a_pattern_that_will_not_compile_is_searched_for_as_text():
     judge = _Judge("")
     got = _python("print('void main() {')")
 
-    view = d.select(text_lines_of(got), "soru", got.handle, judge, keep="main()")
+    # `main()` compiles -- the parentheses are an empty group -- so a test that
+    # used it never reached the branch it was about, and the mutation battery
+    # said so. `main(` is the pattern somebody actually mistypes.
+    view = d.select(text_lines_of(got), "soru", got.handle, judge, keep="main(")
 
     assert "main()" in view.text
 
@@ -627,3 +631,41 @@ def test_keeping_a_line_does_not_move_any_number():
 
     assert _shown(view) == ["iki", "TUT"], "the order or the choice moved"
     assert view.total == 3
+
+
+# -- the ceiling on how many asks are in the air at once ----------------------
+
+
+def test_no_more_asks_are_in_flight_than_the_ceiling_allows(monkeypatch):
+    """The limit is a promise to somebody else's endpoint, not a preference.
+
+    Nothing here counted it. Every test that asks about several batches was
+    happy whether they went one at a time or all at once, so the gate could be
+    removed and the suite would not notice -- which the battery reported as an
+    escaped mutation.
+    """
+    monkeypatch.setenv("SIFT_WORKERS", "1")
+    seen: list[int] = []
+    peak = 0
+    inside = 0
+    lock = threading.Lock()
+
+    def one() -> None:
+        nonlocal peak, inside
+        with d.in_flight():
+            with lock:
+                inside += 1
+                peak = max(peak, inside)
+                seen.append(inside)
+            time.sleep(0.05)
+            with lock:
+                inside -= 1
+
+    threads = [threading.Thread(target=one) for _ in range(4)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert len(seen) == 4, "hepsi gecitten gecmeliydi"
+    assert peak == 1, f"tavan 1 iken {peak} soru ayni anda ucmus"

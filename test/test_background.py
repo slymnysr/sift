@@ -26,7 +26,7 @@ from pathlib import Path
 
 import pytest
 
-from sift import background, jobs, store, view, watch
+from sift import background, distill, jobs, store, view, watch
 from test_distill import _Judge
 
 SLEEPER = "import time; time.sleep(30)"
@@ -703,3 +703,31 @@ def test_a_job_can_be_made_and_ended_on_windows():
         jobs.close(job)
 
     assert jobs.end(handle) is False, "kimse tutmuyorken ad hala duruyor"
+
+
+# -- what the battery found unguarded ----------------------------------------
+
+
+def test_a_second_look_reports_the_numbers_the_capture_uses():
+    """The line numbers in a follow are the run's own, not the look's own.
+
+    The first look starts at line 1, where "the capture's numbering" and "count
+    from one" agree -- so a test that only ever looks once cannot tell them
+    apart, and for a long time none of them did. The second look is where it
+    matters: those lines have to be numbered from where they actually sit, or
+    `sift peek` on a number from a footer lands on different text.
+    """
+    built = distill.View(handle="h", text="", kept=2, total=4, model=None, asks=0)
+
+    said = view.follow_footer("h", built, "no model", first=5, state="running")
+
+    assert "new lines 5-8" in said, said
+
+
+def test_a_first_look_still_starts_where_the_capture_does():
+    """Teeth: the two readings agree at one, which is why this hid for so long."""
+    built = distill.View(handle="h", text="", kept=1, total=4, model=None, asks=0)
+
+    said = view.follow_footer("h", built, "no model", first=1, state="running")
+
+    assert "new lines 1-4" in said, said

@@ -648,6 +648,24 @@ def test_waiting_holds_until_a_run_speaks(capsys):
     assert cli.main(["follow", handle, "--wait", "15"]) == 0
     assert "geldi" in capsys.readouterr().out
 
+def test_the_pattern_the_caller_typed_is_the_pattern_that_is_used(capsys, monkeypatch):
+    """`--keep` has to reach the choosing, not just be parsed off the line.
+
+    Nothing here noticed when it did not. Every other test in this file runs
+    with no model, and with no model `keep` decides nothing at all -- the
+    fallback shows the ends of the capture whatever was asked for. So the flag
+    could be read and thrown away and the suite would agree. It takes a judge
+    to tell the difference, which is what this one brings.
+    """
+    from test_distill import _Judge
+
+    monkeypatch.setattr(view, "Bridge", lambda: _Judge("1"))
+
+    assert cli.main(_run("print('bir'); print('ARANAN'); print('uc')", "--keep", "ARANAN")) == 0
+
+    assert "ARANAN" in capsys.readouterr().out, "istenen desen goruntuye girmedi"
+
+
 # -- Faz 16: what this machine already knows ----------------------------------
 
 
@@ -662,6 +680,11 @@ def test_memory_counts_the_runs_and_says_how_they_went(capsys):
     assert "exit 0" in said
     assert "exit 3" in said
     assert "runs still on disk" in said
+    # The count, and not only that the command appeared. Runs of one command are
+    # gathered under it; a memory that kept the last one and forgot the rest
+    # would look exactly like this line without this assertion, and did.
+    twice = [line for line in said.splitlines() if "print('bir')" in line]
+    assert twice and twice[0].split()[0] == "2", f"iki kosu bir sayilmis: {twice}"
 
 
 def test_memory_names_a_command_that_has_never_once_worked(capsys):

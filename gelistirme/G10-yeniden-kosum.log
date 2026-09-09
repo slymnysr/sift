@@ -1,0 +1,50 @@
+onceki kosudan 0 kural atlandi
+23 kural kosulacak
+
+caught     a run is marked complete only once it has finished
+caught     the ladder is asked in the order it is written
+onceki kosudan 2 kural atlandi
+5 kural kosulacak
+
+caught     a rejected key ends the walk instead of touring the ladder
+caught     a transport that raises is turned into an unreachable reply
+caught     nothing is added to the prompt on the way out
+caught     the view is built from the capture and from nothing else
+caught     a file is read as bytes, so nothing rewrites its line endings
+
+5/5 caught
+onceki kosudan 7 kural atlandi
+5 kural kosulacak
+
+caught     a file that cannot be read is reported, not raised at the user
+caught     an outline nobody chose falls to the ends of the file, not to an error
+caught     a command that cannot even be started comes back as a sentence too
+caught     the reader is told when part of the capture was never looked at
+caught     a stream is read to its end, not to its first block
+
+5/5 caught
+onceki kosudan 12 kural atlandi
+5 kural kosulacak
+
+caught     the effort setting reaches the request
+caught     a follow reports the numbers the capture uses
+caught     the published version is the one the package reports
+caught     a line the caller asked for is shown
+
+4/5 caught
+onceki kosudan 16 kural atlandi
+4 kural kosulacak
+
+caught     the surrounding text survives so the reader can see what was hidden
+caught     a pattern that will not compile is searched for as text
+caught     the pattern the caller typed is the pattern that is used
+caught     a digest is handled by its path, so peek takes it back
+
+4/4 caught
+onceki kosudan 20 kural atlandi
+2 kural kosulacak
+
+caught     every ask passes through the one ceiling
+caught     runs of the same command are counted together
+
+2/2 caught
