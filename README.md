@@ -1,5 +1,7 @@
 # sift
 
+<!-- mcp-name: io.github.slymnysr/sift -->
+
 Runs your command, then gives the model only the lines that matter.
 
 A test suite prints 4,000 lines and eleven of them are the failure. A build

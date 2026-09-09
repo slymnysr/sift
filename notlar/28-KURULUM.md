@@ -67,6 +67,8 @@ mesaj **paketin içinde ships**, yani düzeltmek yeni bir PyPI sürümü gerekti
 
 Üçü aynı cümleye bağlı; biri değişirse üçü de değişmeli.
 
+**Yapıldı — 9 Eylül 2026, sürüm 1.0.1** (`tanitim/T1-SURUM-1-0-1.md`).
+
 ## Kurulumun geri kalanı çalıştı
 
 | adım | sonuç |

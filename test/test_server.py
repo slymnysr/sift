@@ -262,7 +262,8 @@ def test_and_the_test_above_would_have_noticed():
     finished = _without_mcp("import sift.server\n")
 
     assert finished.returncode != 0
-    assert 'pip install "sift-cli[mcp]"' in finished.stderr
+    assert 'uv tool install "sift-cli[mcp]"' in finished.stderr
+    assert "Plain `pip` is refused" in finished.stderr, "calismayan komut verilmemeli"
     assert "Traceback" not in finished.stderr
     assert "`sift`) is already installed" in finished.stderr
 

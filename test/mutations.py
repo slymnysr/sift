@@ -813,7 +813,7 @@ MUTATIONS = [
     Mutation(
         "server.py",
         "a missing extra is answered with the command that fixes it",
-        '        \'    pip install "sift-cli[mcp]"\\n\'',
+        '        \'    uv tool install "sift-cli[mcp]"\\n\'',
         '        "\\n"',
     ),
     Mutation(

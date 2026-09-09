@@ -29,14 +29,17 @@ import time
 try:
     from mcp.server.mcpserver import MCPServer
 except ImportError as exc:
-    # A sentence, not a stack. `pip install sift-cli` brings nothing with it on
+    # A sentence, not a stack. Installing `sift-cli` brings nothing with it on
     # purpose -- somebody who wants the command line should not be made to carry
     # a protocol library for it -- so arriving here is an ordinary thing to do
     # wrong, and the client that started this shows whatever comes out of it.
     raise SystemExit(
         "sift-mcp: the server half needs one more package.\n"
         "\n"
-        '    pip install "sift-cli[mcp]"\n'
+        '    uv tool install "sift-cli[mcp]"\n'
+        "\n"
+        "(or pipx. Plain `pip` is refused by Debian, Ubuntu and WSL, which\n"
+        "protect the system Python -- and they are right to.)\n"
         "\n"
         "The command line (`sift`) is already installed and works without it."
     ) from exc
