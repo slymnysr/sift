@@ -836,6 +836,23 @@ MUTATIONS = [
         "            with contextlib.suppress(ValueError):"
         "  # a heartbeat cannot cost a result",
     ),
+    # -- G5: the other way somebody else's output arrives --------------------
+    Mutation(
+        "cli.py",
+        "what arrives on a pipe is kept, and the marker names where",
+        '        if named == STREAM:',
+        "        if False:",
+    ),
+    Mutation(
+        "capture.py",
+        "a stream is read to its end, not to its first block",
+        "        while True:\n"
+        "            block = source.read(_READ_CHUNK)\n"
+        "            if not block:\n"
+        "                break\n"
+        "            sink.write(block)",
+        "        sink.write(source.read(_READ_CHUNK))",
+    ),
     # -- Faz 25: offering it, and writing into somebody else's file ----------
     Mutation(
         "hook.py",

@@ -133,7 +133,10 @@ def _quiet(lines: list[str], handle: str, first: int) -> View:
 
 
 def best_outline(
-    path: str, budget: int | None = None, keep: str | None = None
+    path: str,
+    budget: int | None = None,
+    keep: str | None = None,
+    name: str | None = None,
 ) -> tuple[View, str]:
     """The best outline of a file, and a word about where it came from.
 
@@ -144,7 +147,7 @@ def best_outline(
     bridge = Bridge()
     reason = "no model"
     try:
-        chosen = outline(path, bridge, budget, keep)
+        chosen = outline(path, bridge, budget, keep, name)
         if chosen is not None:
             return chosen, chose(chosen)
         reason = bridge.last_error or "no lines chosen"
@@ -152,7 +155,7 @@ def best_outline(
         raise
     except Exception as exc:  # a bug here must not cost the caller their outline
         reason = f"{type(exc).__name__}: {exc}"
-    return ends_of(path), f"no model ({reason})"
+    return ends_of(path, name), f"no model ({reason})"
 
 
 def footer(capture: Capture, view: View, who: str) -> str:
@@ -165,7 +168,10 @@ def footer(capture: Capture, view: View, who: str) -> str:
 
 
 def best_digest(
-    path: str, budget: int | None = None, keep: str | None = None
+    path: str,
+    budget: int | None = None,
+    keep: str | None = None,
+    name: str | None = None,
 ) -> tuple[View, str]:
     """The best view of a file somebody else produced, and where it came from.
 
@@ -177,7 +183,7 @@ def best_digest(
     bridge = Bridge()
     reason = "no model"
     try:
-        chosen = digest(path, bridge, budget, keep)
+        chosen = digest(path, bridge, budget, keep, name)
         if chosen is not None:
             return chosen, chose(chosen)
         reason = bridge.last_error or "no lines chosen"
@@ -185,7 +191,7 @@ def best_digest(
         raise
     except Exception as exc:  # a bug here must not cost the caller their file
         reason = f"{type(exc).__name__}: {exc}"
-    return digest_ends(path), f"no model ({reason})"
+    return digest_ends(path, name), f"no model ({reason})"
 
 
 def best_digests(

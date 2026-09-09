@@ -32,6 +32,7 @@ import threading
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import BinaryIO
 
 from sift import store
 
@@ -149,6 +150,52 @@ def run(
         duration_s=round(store.now() - started, 3),
         byte_count=target.stat().st_size if target.is_file() else 0,
         cwd=str(Path(cwd).resolve()) if cwd else os.getcwd(),
+    )
+    store.finish(meta)
+    return Capture(meta)
+
+
+def keep(source: BinaryIO, name: str = "-") -> Capture:
+    """Store what arrives on a stream, and hand it back as a capture.
+
+    A pipe is the other way somebody else's output reaches this tool. `sift run`
+    is for output this process caused; this is for output that was already on
+    its way -- `journalctl | sift digest -`, a log a colleague sent through a
+    terminal, a build running under something that is not sift.
+
+    It is a capture and not a temporary file because of the second rule.
+    Everything a view leaves out has to stay somewhere a `peek` can reach, and a
+    scratch file deleted at exit would make the gap marker a promise that is
+    already broken by the time it is read.
+
+    Reading is chunked. What arrives on a pipe has no length and no manners: it
+    can be four bytes or four gigabytes, and holding it in memory to find out
+    which would be a way of losing the whole thing.
+    """
+    started = store.now()
+    handle = store.new_handle([name, str(started)], started)
+    target = store.begin(handle)
+
+    with open(target, "wb") as sink:
+        while True:
+            block = source.read(_READ_CHUNK)
+            if not block:
+                break
+            sink.write(block)
+
+    meta = store.Meta(
+        handle=handle,
+        command=[name],
+        shell=False,
+        # Nothing was run here, so there is no exit code to report and none is
+        # invented. `None` is what the rest of this already means by "the
+        # command did not end badly, it did not end at all".
+        exit_code=None,
+        timed_out=False,
+        started_at=started,
+        duration_s=round(store.now() - started, 3),
+        byte_count=target.stat().st_size if target.is_file() else 0,
+        cwd=os.getcwd(),
     )
     store.finish(meta)
     return Capture(meta)

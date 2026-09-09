@@ -40,6 +40,7 @@ from sift import answers, store
 from sift import hook as hook_module
 from sift.background import alive, launch, seen, stop, unread, wait_for
 from sift.capture import Capture, run
+from sift.capture import keep as capture_stream
 from sift.distill import BUDGET
 from sift.hook import answer as hook_answer
 from sift.memory import habits, reach
@@ -66,8 +67,8 @@ USAGE = """sift -- run a command, keep every byte, show the lines that matter
            [--budget LINES] [--keep PATTERN] [--] COMMAND...
   sift follow [HANDLE] [--all] [--wait SECONDS]
   sift stop [HANDLE]
-  sift outline [--budget LINES] [--keep PATTERN] PATH
-  sift digest [--budget LINES] [--keep PATTERN] PATH...
+  sift outline [--budget LINES] [--keep PATTERN] PATH|-
+  sift digest [--budget LINES] [--keep PATTERN] PATH...|-
   sift peek HANDLE|PATH [FIRST] [LAST] [--grep PATTERN] [--around N] [--max N]
   sift list [COUNT]
   sift hook                           answer one shell-command event on stdin
@@ -82,6 +83,9 @@ USAGE = """sift -- run a command, keep every byte, show the lines that matter
 
 Everything after COMMAND is passed to it unchanged. Use -- when the command
 has flags that look like sift's own.
+
+A path of - reads standard input, which is kept as a capture of its own: the
+gap markers name its handle, and sift peek takes it from there.
 
 --keep shows every line matching PATTERN whatever else was chosen, and whatever
 the budget says. It is your pattern, not one this tool guessed at."""
@@ -430,15 +434,19 @@ def _outline(args: list[str]) -> int:
         return 2
 
     path = args[0]
+    named = path
+    if path == STREAM:
+        named = _kept_stream()
+        path = str(store.raw_path(named))
     try:
-        view, who = best_outline(path, budget, keep)
+        view, who = best_outline(path, budget, keep, name=named)
     except OSError as exc:  # the file itself cannot be read; there is no view
         print(f"sift: {exc}", file=sys.stderr)
         return 1
 
     if view.text:
         print(view.text)
-    print(outline_footer(path, view, who), file=sys.stderr)
+    print(outline_footer(named, view, who), file=sys.stderr)
     return 0
 
 
@@ -455,14 +463,22 @@ def _digest(args: list[str]) -> int:
         return 2
 
     if len(args) == 1:
+        named = args[0]
+        looked_at = named
+        if named == STREAM:
+            # The gap marker has to name something a person can type again, and
+            # `-` is not that. What arrived is kept, and the handle it was kept
+            # under is what the view refers to from here on.
+            named = _kept_stream()
+            looked_at = str(store.raw_path(named))
         try:
-            view, who = best_digest(args[0], budget, keep)
+            view, who = best_digest(looked_at, budget, keep, name=named)
         except OSError as exc:  # the file itself cannot be read; there is no view
             print(f"sift: {exc}", file=sys.stderr)
             return 1
         if view.text:
             print(view.text)
-        print(outline_footer(args[0], view, who), file=sys.stderr)
+        print(outline_footer(named, view, who), file=sys.stderr)
         return 0
 
     # Several paths are asked about at the same time. Each keeps its own footer,
@@ -476,6 +492,23 @@ def _digest(args: list[str]) -> int:
         if who.startswith("unreadable"):
             worst = 1
     return worst
+
+
+# What a shell means by "the thing on the other end of the pipe". Written down
+# because it appears in three places and because it is a convention rather than
+# a name: `-` is a path nobody has, which is exactly why it was chosen for this.
+STREAM = "-"
+
+
+def _kept_stream() -> str:
+    """Read what is arriving on stdin, keep it, and say where it went.
+
+    A pipe is the other way somebody else's output turns up. It gets a capture
+    of its own rather than a temporary file, because the second rule says every
+    line left out of a view has to stay somewhere `peek` can reach -- and a
+    scratch file is a promise broken by the time the gap marker is read.
+    """
+    return capture_stream(sys.stdin.buffer).handle
 
 
 def _shown_how(args: list[str]) -> tuple[int | None, str | None, list[str]]:

@@ -85,6 +85,7 @@ def outline(
     bridge: Bridge | None = None,
     budget: int | None = None,
     keep: str | None = None,
+    name: str | None = None,
 ) -> View | None:
     """The declarations in `path`, chosen by a model and printed from the file.
 
@@ -100,18 +101,18 @@ def outline(
     return select(
         read(path),
         QUESTION,
-        str(path),
+        str(path) if name is None else name,
         bridge,
         budget=BUDGET if budget is None else budget,
         keep=keep,
     )
 
 
-def ends_of(path: str | Path) -> View:
+def ends_of(path: str | Path, name: str | None = None) -> View:
     """The outline to show when nobody could be asked.
 
     The first lines of a file and the last are a poor table of contents -- the
     top is usually a licence and the imports. They are not a wrong one, and
     every line they skip is counted and named.
     """
-    return from_lines(read(path), str(path))
+    return from_lines(read(path), str(path) if name is None else name)

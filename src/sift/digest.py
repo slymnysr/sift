@@ -55,6 +55,7 @@ def digest(
     bridge: Bridge | None = None,
     budget: int | None = None,
     keep: str | None = None,
+    name: str | None = None,
 ) -> View | None:
     """What is in `path`, chosen by a model and printed from the file.
 
@@ -63,15 +64,22 @@ def digest(
     judgement -- the same contract `distill` and `outline` keep, for the same
     reason: a view that pretended to have been chosen would be worse than one
     that admits it was not.
+
+    Args:
+        name: What the gap markers should say to get the rest back. Left unset,
+            the path itself, which is what `sift peek` takes. A stream has no
+            path anybody could type again, so what came in on one is kept as a
+            capture and named by its handle instead.
     """
     text = text_of(path)
     found = records.of(text)
     ceiling = BUDGET if budget is None else budget
+    labelled = str(path) if name is None else name
     if found is not None:
         return select(
             found,
             RECORDS,
-            str(path),
+            labelled,
             bridge,
             budget=ceiling,
             keep=keep,
@@ -80,14 +88,14 @@ def digest(
     return select(
         text_lines.of(text),
         QUESTION,
-        str(path),
+        labelled,
         bridge,
         budget=ceiling,
         keep=keep,
     )
 
 
-def ends_of(path: str | Path) -> View:
+def ends_of(path: str | Path, name: str | None = None) -> View:
     """What to show when nobody could be asked.
 
     The beginning of a log says what was being attempted and the end says how it
@@ -96,6 +104,7 @@ def ends_of(path: str | Path) -> View:
     """
     text = text_of(path)
     found = records.of(text)
+    labelled = str(path) if name is None else name
     if found is not None:
-        return from_lines(found, str(path), unit="record")
-    return from_lines(text_lines.of(text), str(path))
+        return from_lines(found, labelled, unit="record")
+    return from_lines(text_lines.of(text), labelled)

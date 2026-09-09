@@ -168,8 +168,8 @@ sift run [--timeout SECONDS] [--shell] [--background] [--cwd DIR]
 sift follow [HANDLE] [--all] [--wait N]
                           what a background run has said since you last looked
 sift stop [HANDLE]        end it, and everything it started
-sift outline PATH         what a file declares, without its bodies
-sift digest PATH...       what is in files somebody else produced
+sift outline PATH|-       what a file declares, without its bodies
+sift digest PATH...|-     what is in files somebody else produced
 sift peek HANDLE|PATH [FIRST] [LAST]
 sift hook                 answer one shell-command event on stdin
 sift mcp                  speak the protocol on stdin, for a client
@@ -180,6 +180,21 @@ sift list [COUNT]         what is running, and what has been run
 sift stats [COUNT]        what the shortening cost, and what it saved
 sift gc [DAYS]            remove captures older than that, and say what went
 ```
+
+A path of `-` reads standard input, which is the other way somebody else's
+output turns up:
+
+```
+$ journalctl -u nginx --since yesterday | sift digest -
+Sep 08 04:11:07 nginx[2114]: worker process 2119 exited on signal 11
+─ 8,204 lines not shown · sift peek 7c1a04e9 for any of them ─
+Sep 09 01:02:55 nginx[2114]: signal 15 (SIGTERM) received, exiting
+```
+
+What arrives on a pipe has no path anybody could type again, so it is kept as a
+capture of its own and the gap marker names that instead. The second rule is
+why: a view that left lines out and pointed at a scratch file would be pointing
+at nothing by the time somebody read it.
 
 Several paths given to `digest` are asked about at the same time, and `--all`
 follows every running command in one go. Both are the same idea: the waiting is

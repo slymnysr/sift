@@ -97,7 +97,7 @@ def test_without_a_model_a_digest_still_shows_the_file(capsys, kayit):
 
 
 def test_a_bug_in_the_digester_costs_the_view_and_nothing_else(capsys, kayit, monkeypatch):
-    def explode(path, bridge=None, budget=None, keep=None):
+    def explode(path, bridge=None, budget=None, keep=None, name=None):
         raise RuntimeError("damitici kirildi")
 
     monkeypatch.setattr(view, "digest", explode)
@@ -106,3 +106,80 @@ def test_a_bug_in_the_digester_costs_the_view_and_nothing_else(capsys, kayit, mo
     said = capsys.readouterr()
     assert "Building 214 targets" in said.out
     assert "RuntimeError" in said.err
+
+
+# -- the other way somebody else's output arrives -----------------------------
+
+
+def _piped(monkeypatch, text: str) -> None:
+    """Put `text` where the shell would have put a pipe."""
+    import io
+
+    class _Stdin:
+        buffer = io.BytesIO(text.encode("utf-8"))
+
+    monkeypatch.setattr(cli.sys, "stdin", _Stdin)
+
+
+def test_a_pipe_is_read_and_kept(capsys, monkeypatch):
+    """`journalctl | sift digest -` is the same question asked about a stream.
+
+    What arrives has no path anybody can type again, so it is kept as a capture
+    and the gap marker names the handle instead. The second rule is the whole
+    reason for that: a view that left lines out and pointed at a scratch file
+    would be pointing at nothing by the time somebody read it.
+    """
+    # Long enough that even the view nobody was asked about leaves lines out --
+    # otherwise there is no gap, and the marker this test is about never gets
+    # printed. The suite runs with no model on purpose.
+    _piped(monkeypatch, "".join(f"satir {n}\n" for n in range(200)))
+
+    assert cli.main(["digest", "-"]) == 0
+
+    said = capsys.readouterr()
+    handle = said.err.split()[1]
+    assert len(handle) == 8, said.err
+    assert f"sift peek {handle}" in said.out, "bosluk isareti tutamaci adlandirmali"
+
+
+def test_what_was_piped_comes_back_byte_for_byte(capsys, monkeypatch):
+    """And the loop closes: the handle in the marker is one `peek` takes."""
+    _piped(monkeypatch, "bir\niki\nHATA: uc\ndort\n")
+    cli.main(["digest", "-"])
+    handle = capsys.readouterr().err.split()[1]
+
+    assert cli.main(["peek", handle]) == 0
+
+    assert capsys.readouterr().out == "bir\niki\nHATA: uc\ndort\n"
+
+
+def test_a_stream_longer_than_one_block_arrives_whole(capsys, monkeypatch):
+    """A pipe has no length, and the one it has is not the size of a read.
+
+    This is the case the feature exists for -- a log too big to paste is the
+    reason somebody reaches for a pipe at all -- and it is the case a test with
+    four lines in it silently never covers. The mutation battery found that:
+    reading a single block passed every test here until this one existed.
+    """
+    from sift import capture
+
+    lines = [f"satir {n}\n" for n in range(20_000)]
+    text = "".join(lines)
+    assert len(text.encode()) > capture._READ_CHUNK, "test tek bloktan buyuk olmali"
+    _piped(monkeypatch, text)
+
+    cli.main(["digest", "-"])
+    handle = capsys.readouterr().err.split()[1]
+    cli.main(["peek", handle])
+
+    assert capsys.readouterr().out == text
+
+
+def test_an_outline_can_be_piped_too(capsys, monkeypatch):
+    """The same word, on the other question, because they must not drift."""
+    _piped(monkeypatch, "def bir():\n    pass\n\ndef iki():\n    pass\n")
+
+    assert cli.main(["outline", "-"]) == 0
+
+    said = capsys.readouterr()
+    assert len(said.err.split()[1]) == 8
