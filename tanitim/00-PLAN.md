@@ -37,7 +37,7 @@ Her faz kendi başına bitmiş sayılır ve doğrulanabilir bir çıktısı vard
 | T4 | Dizinler | mcp.so, PulseMCP, Glama, Smithery | **bitti** (2'si kayıt defterinden besleniyor) |
 | T5 | awesome-mcp-servers | PR açık | **bitti** ([#14050](https://github.com/punkpeye/awesome-mcp-servers/pull/14050)) |
 | T6 | README konumlandırma | Problem, insanların aradığı kelimelerle anılıyor | **bitti** |
-| T7 | Sürekli araştırma | `ARASTIRMA.md` güncel, yeni kanallar izleniyor | sürekli |
+| T7 | Sürekli araştırma | `ARASTIRMA.md` güncel, yeni kanallar izleniyor | **güncel** — 13 Eyl'de bakılacak |
 
 ---
 

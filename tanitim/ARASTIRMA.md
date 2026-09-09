@@ -3,7 +3,7 @@
 Bu dosya İŞ 1'in hafızası. Her yeni bulgu, her ret, her ölçüm buraya yazılır.
 Amacı altı ay sonra "bunu denemiş miydik" sorusunu cevaplamak.
 
-**Son güncelleme:** 9 Eylül 2026 (T2 bitti)
+**Son güncelleme:** 9 Eylül 2026 (İŞ1 bitti — T1–T7)
 
 ---
 
@@ -131,35 +131,103 @@ var (kurulum talimatı 28. fazda düzeltildi).
 
 ---
 
-## 4. Henüz araştırılmamış / açık sorular
+## 4. Araştırıldı — 9 Eylül 2026
 
-- **Reddit `r/ClaudeAI`, `r/mcp`** — norm ne, kendi projesini paylaşmak hoş
-  karşılanıyor mu, hangi biçimde
-- **Hacker News** — "Show HN" eşiği; erken paylaşım bir kez yakılan bir kart
-- **dev.to / Medium yazısı** — ölçüm tablosu iyi bir yazı konusu olabilir:
-  "aynı işi sift'li ve sift'siz ölçtük"
-- **MCP istemcileri** — Claude Code dışında hangi istemciler kayıt defterinden
-  okuyor (Cursor, Windsurf, Zed, Cline?) ve ayrı gönderim istiyorlar mı
-- **GitHub Release** sayfasının keşfedilebilirliğe etkisi
-- **PyPI sayfasının okunamaması** — `pypi.org/project/sift-cli/` JavaScript
-  hatası veriyor, bir asistan çekmeye çalışınca boş dönüyor. README ham hâli
-  çalışıyor. Bu, PyPI açıklamasının bir asistan için işe yaramadığı anlamına
-  gelebilir — doğrulanmalı
+### GitHub MCP Registry ve VS Code — beklenmedik kazanç
+
+En değerli bulgu. VS Code'un **`MCP: Browse Servers`** komutu sunucu listesini
+**GitHub MCP Registry**'den çekiyor. Ve GitHub'ın kendi duyurusu:
+
+> developers will be able to self-publish MCP servers directly to the OSS MCP
+> Community Registry. Once published, those servers will **automatically appear
+> in the GitHub MCP Registry**
+
+Yani T2, ayrıca VS Code + Copilot kullanıcılarına da açılan kapıyı açtı. Ayrı
+gönderim yok. **13 Eylül'de doğrulanacak:** `github.com/mcp` aramasında sift
+görünüyor mu.
+
+### PyPI sayfası — sorun JavaScript değil, bot duvarı
+
+Önceki notta "JavaScript hatası" diye yazılmıştı. Değil: `pypi.org/project/
+sift-cli/` bir tarayıcı olmayan istemciye **3 KB'lık "Client Challenge"
+sayfası** dönüyor. Tarayıcı `User-Agent`'ı taklit etmek de yetmiyor.
+
+| yüzey | bir asistan okuyabiliyor mu |
+|---|---|
+| `pypi.org/project/sift-cli/` (HTML) | **hayır** — Client Challenge |
+| `pypi.org/pypi/sift-cli/json` | **evet** — açıklama tam metin geliyor |
+| GitHub README | evet |
+| Kayıt defteri API'si | evet |
+
+**Sonuç:** PyPI açıklamasına yazılan hiçbir şey, bir asistan tarafından HTML
+sayfasından okunamaz. Kayıt defterinin `mcp-name` doğrulaması JSON API'yi
+kullandığı için bizi etkilemiyor — ama "asistan PyPI sayfasını okur" varsayımına
+dayanan hiçbir plan yapılmamalı.
+
+### Reddit ve Hacker News — bizim yapmayacağımız iş
+
+İkisi de **kullanıcının kendi kararı ve kendi kimliğiyle** yapılacak işler; bir
+ajanın topluluk hesabından paylaşım yapması doğru değil. Araştırma yine de
+duruyor, çünkü karar verilirse biçimi belli olsun:
+
+- **`r/mcp`** — MCP'nin en büyük iki topluluğundan biri (diğeri Discord).
+  Sunucu yazarları için `mcp-server-authors` etiketi var; moderatörleri
+  etiketleyip ne yaptığını söylemek beklenen davranış
+- **Show HN** — başlık `Show HN:` ile başlamalı, reklam dili başlığı
+  değiştirtir. İlk yorum yapımcının kendi yorumu olmalı: neden yazıldı, neyle
+  yazıldı, **ve dürüst bir sınır**. Salı–Perşembe 09:00–12:00 ET. İlk 60 dakika
+  yorumlara cevap vermek gerekiyor — yani boş bir saatte atılmamalı
+- **Bir kez yakılan kart:** Show HN bir projeyi bir kez tanıtır. sift'in
+  bugünkü hâli iyi ama yıldızı sıfır; birkaç haftalık gerçek kullanım ve
+  cevaplanmış birkaç issue sonrası daha güçlü bir kart olur
+
+### Değerlendirilip elenen kanallar
+
+- **Docker MCP Catalog** (`docker/mcp-registry`, PR ile) — sift'in işi
+  **bu makinedeki komutu çalıştırmak.** Konteyner içinde çalıştırılırsa yanlış
+  makinenin çıktısını verir. Teknik olarak mümkün, kavramsal olarak yanlış:
+  eklenmedi
+- **Anthropic connector dizini** — uzak (remote) bağlayıcılar için. sift yerel
+  stdio; uygun değil
+
+### Hâlâ açık
+
+- **dev.to / Medium yazısı** — ölçüm tablosu iyi bir yazı konusu:
+  "aynı işi sift'li ve sift'siz ölçtük". Zamanlama Show HN ile birlikte
+  düşünülmeli
+- **GitHub Release sayfasının** keşfedilebilirliğe ölçülebilir etkisi
 
 ---
 
 ## 5. Ölçüm — bugünün taban çizgisi
 
-| gösterge | 9 Eylül (sabah) | 9 Eylül (T2 sonrası) |
+| gösterge | 9 Eylül (sabah) | 9 Eylül (İŞ1 sonu) |
 |---|---|---|
 | GitHub yıldız | 0 | 0 |
-| GitHub topics | 0 | 0 |
+| GitHub topics | 0 | **12** |
+| GitHub release sayfası | 0 | **3** |
+| Depo açıklaması | "MCP" geçmiyor | **"MCP server and CLI…"** |
 | PyPI sürüm | 1.0.0 | **1.0.2** |
 | PyPI indirme | (ölçülmedi) | (ölçülmedi) |
 | Kayıt defteri | kayıtlı değil | **`io.github.slymnysr/sift`, active** |
-| Dizin | 0/4 | 0/4 |
+| GitHub MCP Registry | yok | kayıttan besleniyor — 13 Eyl'de bakılacak |
+| mcp.so | yok | [issue #4010](https://github.com/chatmcp/mcpso/issues/4010) |
+| Glama / Smithery / PulseMCP | yok | kayıttan besleniyor — 13 Eyl'de bakılacak |
+| awesome-mcp-servers | yok | [PR #14050](https://github.com/punkpeye/awesome-mcp-servers/pull/14050) |
+
+**Bir yabancının sift'e ulaşabileceği bağımsız yol sayısı: 0 → 6**
+(resmî kayıt defteri, GitHub MCP Registry/VS Code, mcp.so, Glama, Smithery,
+awesome-mcp-servers) — dördü hâlâ tarama bekliyor.
 
 Sonraki ölçümler buraya eklenecek.
+
+### 13 Eylül 2026'da bakılacaklar
+
+- `github.com/mcp` — sift göründü mü
+- Glama, Smithery, PulseMCP — tarama geldi mi
+- mcp.so issue #4010 — cevap/kabul
+- awesome-mcp-servers PR #14050 — birleşti mi
+- PyPI indirme sayısı (`pypistats`), GitHub yıldız
 
 ---
 
