@@ -43,7 +43,7 @@ from sift.capture import Capture, run
 from sift.distill import BUDGET
 from sift.hook import answer as hook_answer
 from sift.memory import habits, reach
-from sift.model import find_key, sending_on
+from sift.model import sending_on, somewhere_to_ask
 from sift.peek import FOUND_CAP, peek
 from sift.tools import BY_NAME, KNOWN, command_for
 from sift.view import (
@@ -115,6 +115,10 @@ NO_KEY = """\
 │      or put it in ~/.config/nvidia/api_key                           │
 │      get one at https://build.nvidia.com                             │
 │                                                                      │
+│  Running your own model? Then no key is wanted, only an address:     │
+│      export SIFT_BASE_URL=http://localhost:11434/v1                  │
+│      export SIFT_MODELS=qwen3:8b                                     │
+│                                                                      │
 │  Meant to run without a model? SIFT_NO_MODEL=1 says so, and silences │
 │  this.                                                               │
 └──────────────────────────────────────────────────────────────────────┘"""
@@ -132,7 +136,7 @@ def _warn_unset(word: str) -> None:
     the difference between somebody who decided and somebody who has not
     finished. Nagging the first about the second is how a warning gets ignored.
     """
-    if word in NEEDS_A_MODEL and sending_on() and find_key() is None:
+    if word in NEEDS_A_MODEL and sending_on() and not somewhere_to_ask():
         print(NO_KEY, file=sys.stderr)
 
 
@@ -816,7 +820,7 @@ def _mention_hook() -> None:
     # run without a key is already being told to go and get one; spending the
     # single mention this ever makes on the same screen would waste it on
     # somebody who has not seen the tool work yet.
-    if sending_on() and find_key() is None:
+    if sending_on() and not somewhere_to_ask():
         return
     marker = store.home() / TOLD
     if marker.exists():

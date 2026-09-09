@@ -49,6 +49,9 @@ class _Fake:
     def __init__(self, *replies: Reply | Exception) -> None:
         self.replies = list(replies)
         self.asked: list[dict] = []
+        # What was on each ask. Only one test reads these, and it is about the
+        # header that must not be there.
+        self.headers: list[dict] = []
         self.slept: list[float] = []
         # What each ask was given to wait. The two passes differ in nothing else,
         # so this is how a test tells them apart.
@@ -56,6 +59,7 @@ class _Fake:
 
     def __call__(self, *, url: str, headers: dict, body: bytes, timeout: float) -> Reply:
         self.asked.append(json.loads(body))
+        self.headers.append(dict(headers))
         self.waited.append(timeout)
         assert self.replies, "transport asked more often than it was prepared for"
         reply = self.replies.pop(0)
@@ -84,7 +88,72 @@ def test_without_a_key_nothing_is_sent_and_nothing_is_raised():
     assert not bridge.available
     assert bridge.ask("sistem", "kullanici") is None
     assert fake.asked == [], "anahtar yokken ag uzerinden bir sey gitmemeli"
-    assert bridge.last_error == "no api key"
+    assert bridge.last_error == "no api key and no endpoint of your own"
+
+
+# -- an endpoint of one's own ------------------------------------------------
+
+
+def test_an_endpoint_of_your_own_is_asked_without_a_key(monkeypatch):
+    """A model somebody is running themselves has nobody to bill.
+
+    Ollama, llama.cpp, vLLM, LM Studio and a company gateway all speak this
+    shape and none of them wants a key. Refusing to ask one because no key was
+    found is refusing on behalf of a transaction nobody is making -- and what
+    the person gets instead is the deterministic view and the words `no api
+    key`, about a server that is running and would have answered.
+    """
+    monkeypatch.setenv("SIFT_BASE_URL", "http://localhost:11434/v1")
+    fake = _Fake(_ok())
+    bridge = Bridge(transport=fake, api_key="")
+
+    assert bridge.available
+    assert bridge.ask("sistem", "kullanici") is not None
+    assert fake.asked, "kendi uc noktasi gosterilmisken soru sorulmali"
+
+
+def test_a_question_with_no_key_carries_no_authorization(monkeypatch):
+    """`Bearer None` is a string somebody else's server has to have an opinion about."""
+    monkeypatch.setenv("SIFT_BASE_URL", "http://localhost:11434/v1")
+    fake = _Fake(_ok())
+    Bridge(transport=fake, api_key="").ask("sistem", "kullanici")
+
+    assert "Authorization" not in fake.headers[0]
+
+
+def test_a_key_is_still_carried_when_there_is_one():
+    """Teeth for the test above: the header has to be able to appear."""
+    fake = _Fake(_ok())
+    _bridge(fake).ask("sistem", "kullanici")
+
+    assert fake.headers[0]["Authorization"] == "Bearer nvapi-sahte"
+
+
+def test_the_address_goes_where_it_was_pointed(monkeypatch):
+    """And it is that address that is asked, not the one that bills."""
+    monkeypatch.setenv("SIFT_BASE_URL", "http://localhost:8000/v1/")
+    bridge = Bridge(transport=_Fake(_ok()), api_key="")
+
+    assert bridge.base_url == "http://localhost:8000/v1"
+
+
+def test_somewhere_to_ask_is_either_of_the_two(monkeypatch):
+    """The one question the command line and the server both ask before warning."""
+    assert not m.somewhere_to_ask()
+
+    monkeypatch.setenv("SIFT_BASE_URL", "http://localhost:11434/v1")
+    assert m.somewhere_to_ask()
+
+    monkeypatch.delenv("SIFT_BASE_URL")
+    monkeypatch.setenv("SIFT_API_KEY", "nvapi-sahte")
+    assert m.somewhere_to_ask()
+
+
+def test_a_blank_address_is_not_an_address(monkeypatch):
+    """An empty variable is how a shell says a thing was never set."""
+    monkeypatch.setenv("SIFT_BASE_URL", "   ")
+    assert m.own_endpoint() is None
+    assert not m.somewhere_to_ask()
 
 
 def _size_word(model: str) -> str:

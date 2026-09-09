@@ -123,6 +123,8 @@ is still shown to you in full**.
 Three switches:
 
 ```bash
+SIFT_BASE_URL=... # ask your own endpoint instead, and no key is wanted
+SIFT_MODELS=a,b   # which models to ask there, best first
 SIFT_NO_MODEL=1   # never send anything; use the deterministic view
 SIFT_MASK=0       # send unmasked
 SIFT_CACHE=0      # ask again, even about text already answered
@@ -292,11 +294,15 @@ nothing there is this.
 
 Python 3.12 or newer, and no dependencies for the command line.
 
-### You need your own key
+### You need a model — a key, or one of your own
 
-**This is not optional and it is not shipped.** `sift` asks a free NVIDIA model
-which lines matter, and that key has to be yours — one cannot be bundled and one
-cannot be shared. It is free, and it takes a minute:
+`sift` asks a model which lines matter. There are two ways to give it one and
+you need exactly one of them.
+
+#### A free key
+
+**Not shipped, and not shareable.** The key has to be yours. It is free, and it
+takes a minute:
 
 1. Get a key at **<https://build.nvidia.com>**
 2. Put it anywhere `sift` looks:
@@ -307,7 +313,33 @@ export SIFT_API_KEY=nvapi-...            # or NVIDIA_API_KEY
 mkdir -p ~/.config/nvidia && echo 'nvapi-...' > ~/.config/nvidia/api_key
 ```
 
-Without it the two callers are answered differently, on purpose:
+#### Or a model of your own, and no key at all
+
+Point `sift` somewhere and it asks there instead. Nothing about the question
+changes; the endpoint is asked the ordinary OpenAI-shaped way, and no
+`Authorization` header is sent when there is no key to put in it.
+
+```bash
+export SIFT_BASE_URL=http://localhost:11434/v1   # Ollama
+export SIFT_MODELS=qwen3:8b                      # what to ask, best first
+```
+
+The same two lines fit llama.cpp (`--api`), vLLM, LM Studio, LocalAI, a company
+gateway, or any other endpoint that speaks `POST /v1/chat/completions`.
+`SIFT_MODELS` takes a comma-separated ladder and is asked in order.
+
+An address you typed is treated as a decision: nothing warns you about a missing
+key, and the MCP server does not decline. What that endpoint wants for
+credentials is between you and it.
+
+> Tested here as a shape rather than as a list: the suite proves that an
+> endpoint of your own is asked, and asked without a key. Which local servers
+> answer *well* is a question about the model you run, and the corpus in
+> `test/budget.py` is how you can settle it for yours.
+
+#### Without either of them
+
+The two callers are answered differently, on purpose:
 
 - **At a terminal** everything still runs — the command, the bytes, the exit
   code, the third rule — and a loud banner says no model chose these lines and

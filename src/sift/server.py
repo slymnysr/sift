@@ -50,7 +50,7 @@ from sift.background import launch, seen, unread, wait_for
 from sift.background import stop as stop_run
 from sift.capture import run as run_command
 from sift.distill import BUDGET
-from sift.model import find_key, sending_on
+from sift.model import sending_on, somewhere_to_ask
 from sift.peek import peek as peek_at
 from sift.tools import BY_NAME, KNOWN, command_for
 from sift.view import (
@@ -112,7 +112,7 @@ def _unset() -> bool:
     * a key that the endpoint would not take, or an endpoint that is down --
       the third rule's territory, and it falls back to the ends of the output.
     """
-    return sending_on() and find_key() is None
+    return sending_on() and not somewhere_to_ask()
 
 
 INSTRUCTIONS = """\

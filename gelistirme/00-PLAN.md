@@ -25,7 +25,7 @@ geldiğinde mutasyon bataryasına da bir satır düşer.
 
 | # | Faz | Ne biter | Neden | Durum |
 |---|-----|----------|-------|---|
-| G1 | Anahtar tek yol olmasın | Kendi uç noktanı gösterdiğinde anahtarsız çalışır | Bugün sift'i denemek için NVIDIA anahtarı şart — benimsemenin önündeki en büyük tek engel | bekliyor |
+| G1 | Anahtar tek yol olmasın | Kendi uç noktanı gösterdiğinde anahtarsız çalışır | Bugün sift'i denemek için NVIDIA anahtarı şart — benimsemenin önündeki en büyük tek engel | **bitti** |
 | G2 | Araçların künyesi | Yedi araç `annotations` + `title` taşır | `peek` bir dosya okur, `run` rastgele komut çalıştırır; istemci şu an ikisini ayırt edemiyor | bekliyor |
 | G3 | Sonucun içinde veri | Metin aynı, yanında `handle`/`exit`/`shown`/`model` alanları | Ajan çıkış kodunu düzyazıdan çıkarmak zorunda kalmasın | bekliyor |
 | G4 | Uzun komut sessiz kalmasın | `run` ilerleme bildirir | 5 dakikalık derleme şu an asılı görünüyor | bekliyor |

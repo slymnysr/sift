@@ -131,6 +131,29 @@ class Answer:
 Transport = Callable[..., Reply]
 
 
+def own_endpoint() -> str | None:
+    """The endpoint somebody pointed this at on purpose, if they did.
+
+    `SIFT_BASE_URL` is not a preference; it is a decision about where questions
+    go. Somebody who set it is running their own model -- Ollama, llama.cpp,
+    vLLM, LM Studio, a company gateway -- and every one of those answers without
+    a key, because there is nobody to bill.
+    """
+    written = (os.environ.get("SIFT_BASE_URL") or "").strip()
+    return written or None
+
+
+def somewhere_to_ask() -> bool:
+    """Whether a question has anywhere to go: a key, or an endpoint of one's own.
+
+    The two are alternatives rather than a pair. The default endpoint bills, so
+    it needs a key and a machine without one has not finished being set up. An
+    endpoint someone typed themselves is the opposite: they said where, and what
+    it wants is its business.
+    """
+    return find_key() is not None or own_endpoint() is not None
+
+
 def find_key() -> str | None:
     """The API key, from the environment or from where `nemotron` keeps it.
 
@@ -190,6 +213,9 @@ class Bridge:
         written_url = base_url or os.environ.get("SIFT_BASE_URL") or DEFAULT_BASE_URL
         self.base_url = written_url.rstrip("/")
         self.api_key = find_key() if api_key is None else api_key
+        # Whether this was pointed somewhere on purpose. A key is not the only
+        # way to have somewhere to ask, and a local model is not billed.
+        self.own_endpoint = bool(base_url or own_endpoint())
         self.timeout = _as_float(os.environ.get("SIFT_TIMEOUT"), _DEFAULT_TIMEOUT, timeout)
         self.patience = _as_float(
             os.environ.get("SIFT_PATIENCE"), _PATIENT_TIMEOUT, patience
@@ -200,13 +226,18 @@ class Bridge:
 
     @property
     def available(self) -> bool:
-        """Whether there is a key to ask with.
+        """Whether there is anywhere to ask: a key, or an endpoint of one's own.
 
         Callers use this to choose a path before spending effort building a
         prompt, not to decide whether they are allowed to fail: `ask` is safe to
         call either way.
+
+        A key is not the only way. The default endpoint bills and so it needs
+        one; a model somebody is running themselves does not, and refusing to
+        ask it because no key was found would be refusing on behalf of a
+        transaction that nobody is making.
         """
-        return bool(self.api_key)
+        return bool(self.api_key) or self.own_endpoint
 
     def ask(self, system: str, user: str, *, max_tokens: int = 1024) -> Answer | None:
         """Put a question to the best model that will take it, or return nothing.
@@ -237,7 +268,7 @@ class Bridge:
             return None
 
         if not self.available:
-            self.last_error = "no api key"
+            self.last_error = "no api key and no endpoint of your own"
             return None
 
         answer, queued = self._walk(system, user, max_tokens, self.timeout)
@@ -266,10 +297,13 @@ class Bridge:
         """
         url = f"{self.base_url}/chat/completions"
         headers = {
-            "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
+        # Sent only when there is one. `Bearer None` is a string a local server
+        # has to decide what to do with, and some of them decide wrongly.
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
         tries = 0
         queued = False
 

@@ -114,6 +114,37 @@ def test_a_key_that_exists_is_enough_to_be_set_up(monkeypatch):
     assert "merhaba" in said
 
 
+def test_an_endpoint_of_your_own_is_enough_to_be_set_up(monkeypatch):
+    """Somebody running their own model has finished setting this up.
+
+    This gate exists because a machine with no key hands an agent a much worse
+    view that looks exactly like a good one. A machine pointed at a local model
+    is not that machine: it has somewhere to ask, and what that endpoint wants
+    for credentials is between the two of them.
+    """
+    monkeypatch.setenv("SIFT_BASE_URL", "http://localhost:11434/v1")
+    monkeypatch.setenv("SIFT_MODELS", "qwen3:8b")
+
+    said = s.run(SAY)
+
+    assert said != s.NO_KEY
+    assert "merhaba" in said
+
+
+def test_the_banner_is_not_printed_to_somebody_running_their_own_model(
+    capsys, monkeypatch
+):
+    """And the command line does not send them after a key they do not need."""
+    monkeypatch.setenv("SIFT_BASE_URL", "http://127.0.0.1:1")
+    monkeypatch.setenv("SIFT_MODELS", "only-one")
+
+    assert cli.main(["run", "--", "echo", "merhaba"]) == 0
+
+    said = capsys.readouterr()
+    assert "no API key" not in said.err
+    assert "merhaba" in said.out, "ucuncu kural: komut yine calisir"
+
+
 # -- the other caller, who can see what they were given ----------------------
 
 

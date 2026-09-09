@@ -769,20 +769,41 @@ MUTATIONS = [
     Mutation(
         "server.py",
         "a server with no key declines instead of answering worse",
-        "    return sending_on() and find_key() is None",
+        "    return sending_on() and not somewhere_to_ask()",
         "    return False",
     ),
     Mutation(
         "server.py",
         "switching the model off on purpose is not the same as forgetting a key",
-        "    return sending_on() and find_key() is None",
-        "    return find_key() is None",
+        "    return sending_on() and not somewhere_to_ask()",
+        "    return not somewhere_to_ask()",
     ),
     Mutation(
         "cli.py",
         "a terminal with no key is told so, loudly",
-        "    if word in NEEDS_A_MODEL and sending_on() and find_key() is None:",
+        "    if word in NEEDS_A_MODEL and sending_on() and not somewhere_to_ask():",
         "    if False:",
+    ),
+    # -- G1: a key is not the only way to have somewhere to ask --------------
+    Mutation(
+        "model.py",
+        "an endpoint of one's own counts as somewhere to ask",
+        "        return bool(self.api_key) or self.own_endpoint",
+        "        return bool(self.api_key)",
+    ),
+    Mutation(
+        "model.py",
+        "a question with no key carries no authorization header",
+        "        if self.api_key:\n"
+        '            headers["Authorization"] = f"Bearer {self.api_key}"',
+        '        headers["Authorization"] = f"Bearer {self.api_key}"',
+    ),
+    Mutation(
+        "model.py",
+        "a blank address is not an address",
+        '    written = (os.environ.get("SIFT_BASE_URL") or "").strip()\n'
+        "    return written or None",
+        '    return os.environ.get("SIFT_BASE_URL")',
     ),
     # -- Faz 25: offering it, and writing into somebody else's file ----------
     Mutation(
@@ -819,7 +840,7 @@ MUTATIONS = [
     Mutation(
         "cli.py",
         "the offer waits until there is not a key to fetch first",
-        "    if sending_on() and find_key() is None:\n        return",
+        "    if sending_on() and not somewhere_to_ask():\n        return",
         "    if False:\n        return",
     ),
     # -- Faz 26: waiting on a rung that is not going to answer ---------------

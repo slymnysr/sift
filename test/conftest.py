@@ -103,7 +103,11 @@ def _own_store(tmp_path, monkeypatch):
     # Same shape as the store leak above and the same fix: not "remember to set
     # HOME in the next test file", but "a test cannot reach it".
     _move_home(monkeypatch, tmp_path)
-    for name in ("SIFT_API_KEY", "NVIDIA_API_KEY"):
+    # `SIFT_BASE_URL` is on this list for the same reason as the keys: an
+    # endpoint of one's own is now one of the two ways to have somewhere to ask,
+    # so one left in the environment would quietly make every test in the suite
+    # a test of a machine that is set up.
+    for name in ("SIFT_API_KEY", "NVIDIA_API_KEY", "SIFT_BASE_URL", "SIFT_MODELS"):
         monkeypatch.delenv(name, raising=False)
     # And it says so, rather than looking like a machine nobody set up.
     #
