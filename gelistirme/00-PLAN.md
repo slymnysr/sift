@@ -27,7 +27,7 @@ geldiğinde mutasyon bataryasına da bir satır düşer.
 |---|-----|----------|-------|---|
 | G1 | Anahtar tek yol olmasın | Kendi uç noktanı gösterdiğinde anahtarsız çalışır | Bugün sift'i denemek için NVIDIA anahtarı şart — benimsemenin önündeki en büyük tek engel | **bitti** |
 | G2 | Araçların künyesi | Yedi araç `annotations` + `title` taşır | `peek` bir dosya okur, `run` rastgele komut çalıştırır; istemci şu an ikisini ayırt edemiyor | **bitti** |
-| G3 | Sonucun içinde veri | Metin aynı, yanında `handle`/`exit`/`shown`/`model` alanları | Ajan çıkış kodunu düzyazıdan çıkarmak zorunda kalmasın | bekliyor |
+| G3 | Sonucun içinde veri | — | **Ölçüldü: her sonuca %39,5 token ekliyor.** Reddedildi, gerekçesi yazıldı | **reddedildi** |
 | G4 | Uzun komut sessiz kalmasın | `run` ilerleme bildirir | 5 dakikalık derleme şu an asılı görünüyor | bekliyor |
 | G5 | Boru ve modül | `sift digest -`, `python -m sift` | İkisi de Unix'te ve Python'da beklenen yol; ikisi de yok | bekliyor |
 | G6 | Diskin tavanı | Bir yakalamanın yazabileceği bir sınır, ve söylenmiş bir sınır | `sift run -- yes` bugün diski doldurur | bekliyor |
@@ -79,14 +79,12 @@ rastgele kabuk komutu çalıştırır.
 **Bitti sayılır:** `tools/list` künyeleri döndürüyor, ve bir test bunu
 gerçek taşıyıcı üzerinden okuyor.
 
-## G3 — Sonucun içinde veri
+## G3 — Sonucun içinde veri → **reddedildi**
 
-**Yapılacak** — `structured_output`: metin **birebir aynı kalır** (üçüncü kural:
-bugün çalışan bir istemci yarın da çalışmalı), yanına alanlar düşer:
-`handle`, `exit`, `shown`, `total`, `model`, `cached`.
-
-**Bitti sayılır:** Sonuçta hem eski metin hem alanlar var; bir test ikisinin
-aynı şeyi söylediğini kanıtlıyor.
+Ölçüldü ve yapılmadı: `structuredContent`, `content`'in yanına eklendiği için
+her sonucu **51 token, %39,5** büyütüyor. Karşılığı, ajanın zaten okuduğu bir
+altbilgiyi ayrıştırmak zorunda kalmaması. Bağlamı küçültmek için var olan bir
+araç bu takası yapamaz. Gerekçe ve ölçüm: `G3-YAPISAL-SONUC.md`.
 
 ## G4 — Uzun komut sessiz kalmasın
 
