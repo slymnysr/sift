@@ -110,22 +110,22 @@ async def test_the_instructions_account_for_every_tool_on_offer():
 # -- what stderr used to carry ----------------------------------------------
 
 
-def test_the_note_travels_inside_the_result(counting):
-    answer = s.run(counting)
+async def test_the_note_travels_inside_the_result(counting):
+    answer = await s.run(counting)
 
     assert _note(answer).startswith("sift ")
     assert "exit 0" in _note(answer)
     assert "401 lines" in _note(answer)
 
 
-def test_the_caller_is_told_when_no_model_chose_the_lines(counting):
+async def test_the_caller_is_told_when_no_model_chose_the_lines(counting):
     """The difference the reader cannot see for themselves, and must be told."""
-    answer = s.run(counting)
+    answer = await s.run(counting)
 
     assert "no model" in _note(answer)
 
 
-def test_the_note_names_the_model_when_there_was_one(counting, monkeypatch):
+async def test_the_note_names_the_model_when_there_was_one(counting, monkeypatch):
     monkeypatch.setattr(
         view,
         "distill",
@@ -133,31 +133,31 @@ def test_the_note_names_the_model_when_there_was_one(counting, monkeypatch):
             capture.handle, "bir", 1, 9, "a-model", 1
         ),
     )
-    answer = s.run(counting)
+    answer = await s.run(counting)
 
     assert "a-model" in _note(answer)
     assert "1/9 lines" in _note(answer)
 
 
-def test_a_command_that_failed_says_so(tmp_path):
+async def test_a_command_that_failed_says_so(tmp_path):
     script = tmp_path / "fail.py"
     script.write_text("import sys\nprint('bir')\nsys.exit(3)\n", encoding="utf-8")
 
-    assert "exit 3" in _note(s.run(f'"{sys.executable}" "{script}"'))
+    assert "exit 3" in _note(await s.run(f'"{sys.executable}" "{script}"'))
 
 
 # -- the promises the command line already makes -----------------------------
 
 
-def test_no_line_in_a_result_was_invented(counting):
-    answer = s.run(counting)
+async def test_no_line_in_a_result_was_invented(counting):
+    answer = await s.run(counting)
     kept = set(s.peek(_handle(answer)).splitlines())
 
     for line in _shown(answer):
         assert line in kept
 
 
-def test_the_server_climbs_the_same_ladder_as_the_command_line(counting, monkeypatch):
+async def test_the_server_climbs_the_same_ladder_as_the_command_line(counting, monkeypatch):
     """The proof that this module holds no second copy of anything.
 
     Break the distiller in `view.py` -- the only place it is called from -- and
@@ -169,14 +169,14 @@ def test_the_server_climbs_the_same_ladder_as_the_command_line(counting, monkeyp
         raise RuntimeError("damitici kirildi")
 
     monkeypatch.setattr(view, "distill", explode)
-    answer = s.run(counting)
+    answer = await s.run(counting)
 
     assert "RuntimeError: damitici kirildi" in _note(answer)
     assert _shown(answer)
 
 
-def test_the_loop_closes_from_a_result_back_to_the_bytes(counting):
-    answer = s.run(counting)
+async def test_the_loop_closes_from_a_result_back_to_the_bytes(counting):
+    answer = await s.run(counting)
 
     assert s.peek(_handle(answer), 200, 202).splitlines()[:3] == ["200", "201", "202"]
 
@@ -207,13 +207,13 @@ def test_a_handle_that_never_existed_is_said_rather_than_raised():
     assert answer.startswith("sift: ")
 
 
-def test_a_command_that_cannot_be_started_is_said_rather_than_raised(monkeypatch):
+async def test_a_command_that_cannot_be_started_is_said_rather_than_raised(monkeypatch):
     def refuse(*args, **kwargs):
         raise OSError("calistirilamadi")
 
     monkeypatch.setattr(s, "run_command", refuse)
 
-    assert s.run("herhangi") == "sift: calistirilamadi"
+    assert await s.run("herhangi") == "sift: calistirilamadi"
 
 
 # -- the package without the server package ----------------------------------
@@ -389,6 +389,98 @@ async def test_every_tool_has_a_name_a_person_can_read(tmp_path):
         assert tool.title != tool.name
 
 
+# -- a command that has not finished says so ---------------------------------
+
+
+class _Ear:
+    """A context that only remembers what it was told."""
+
+    def __init__(self) -> None:
+        self.heard: list[tuple[float, str | None]] = []
+
+    async def report_progress(self, progress, total=None, message=None) -> None:
+        self.heard.append((progress, message))
+
+
+async def test_a_command_that_is_still_running_says_so(monkeypatch, tmp_path):
+    """A ten-minute build is indistinguishable from a hung server over a pipe.
+
+    What travels is a notification, beside the result rather than inside it, so
+    nothing here reaches the conversation and nothing is billed for it. What it
+    buys is a client that can tell waiting from broken -- and a timeout clock
+    the protocol lets a notification reset.
+    """
+    monkeypatch.setattr(s, "HEARTBEAT_S", 0.05)
+    ear = _Ear()
+
+    answer = await s.run(f'"{sys.executable}" -c "import time; time.sleep(0.4)"', ctx=ear)
+
+    assert ear.heard, "hic ilerleme bildirilmedi"
+    assert all(message and "still running" in message for _, message in ear.heard)
+    assert [w for w, _ in ear.heard] == sorted(w for w, _ in ear.heard), "geri saymaz"
+    assert "exit 0" in _note(answer), "ucuncu kural: cevap yine geldi"
+
+
+async def test_a_heartbeat_that_fails_costs_nothing(monkeypatch, tmp_path):
+    """Teeth for the third rule, where it is easiest to break by accident.
+
+    Reporting progress talks to the client, and talking to the client can fail
+    in every way a socket can. None of those may cost the caller the answer they
+    asked for -- so the failure is swallowed where it happens rather than
+    allowed to end the run that was going fine.
+    """
+    monkeypatch.setattr(s, "HEARTBEAT_S", 0.05)
+
+    class _Broken(_Ear):
+        asked = False
+
+        async def report_progress(self, progress, total=None, message=None):
+            type(self).asked = True
+            raise RuntimeError("istemci gitti")
+
+    broken = _Broken()
+    # Long enough to be beaten by the heartbeat above: a command that finishes
+    # first is never reported on, and this test would pass without the failure
+    # it is about ever happening. It did, in the first version of it -- the
+    # mutation battery is how that was found.
+    answer = await s.run(
+        f'"{sys.executable}" -c "import time; time.sleep(0.4)"', ctx=broken
+    )
+
+    assert broken.asked, "kirik ilerleme hic cagrilmadi -- test bir sey kanitlamiyor"
+    assert "exit 0" in _note(answer)
+
+
+async def test_a_direct_call_with_nobody_listening_still_answers():
+    """No context is the ordinary case for six of the seven tools, and for tests."""
+    answer = await s.run("echo merhaba", ctx=None)
+
+    assert "merhaba" in answer
+
+
+async def test_the_progress_reaches_a_real_client(tmp_path):
+    """The one test that proves the wiring rather than the logic.
+
+    Everything above hands `run` a context of its own making. If the library
+    never injects a real one -- because the annotation is wrong, or optional
+    parameters are not injected -- those tests would go on passing while no
+    client ever heard a thing. This is the only test that would notice.
+    """
+    heard: list[str | None] = []
+
+    async def listen(progress, total=None, message=None) -> None:
+        heard.append(message)
+
+    async with Client(_parameters(tmp_path)) as client:
+        await client.call_tool(
+            "run",
+            {"command": f'"{sys.executable}" -c "import time; time.sleep(6)"'},
+            progress_callback=listen,
+        )
+
+    assert heard, "gercek bir istemciye tek bir bildirim bile ulasmadi"
+
+
 async def test_the_installed_server_answers_over_stdio(tmp_path):
     """The one test that runs the packaged thing the way a client will.
 
@@ -419,14 +511,14 @@ async def test_a_real_client_is_given_a_sentence_and_not_a_crash(tmp_path):
     assert answer.startswith("sift: ")
 
 
-def test_a_run_over_the_wire_is_billed_the_way_one_at_a_terminal_is(counting):
+async def test_a_run_over_the_wire_is_billed_the_way_one_at_a_terminal_is(counting):
     """Faz 8's report counts both front ends or it is not about the tool.
 
     The bill is drawn in `view.py`, beside the ladder, so a client's run turns up
     in `sift stats` next to a person's without either front end being asked to
     remember. Neither of them mentions the store at all.
     """
-    saving = store.load_saving(_handle(s.run(counting)))
+    saving = store.load_saving(_handle(await s.run(counting)))
 
     assert saving is not None
     assert saving.total == 401

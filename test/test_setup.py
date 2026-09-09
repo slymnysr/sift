@@ -20,12 +20,26 @@ getting out of the way of it.
 
 from __future__ import annotations
 
+import inspect
+
 import pytest
 
 from sift import cli
 from sift import server as s
 
 SAY = "echo merhaba"
+
+
+async def _said(call):
+    """Whatever the tool answered, waited for if it needed waiting for.
+
+    `run` is a coroutine because a command that takes ten minutes has to be able
+    to say it is still going; the other six answer straight away. The list below
+    is about what every tool does when nobody finished setting this up, and that
+    question is the same for both kinds.
+    """
+    got = call()
+    return await got if inspect.isawaitable(got) else got
 
 
 @pytest.fixture(autouse=True)
@@ -46,18 +60,18 @@ def _unconfigured(monkeypatch):
         (lambda: s.tool("loc"), "tool"),
     ],
 )
-def test_every_tool_that_needs_a_model_declines(call, what):
-    said = call()
+async def test_every_tool_that_needs_a_model_declines(call, what):
+    said = await _said(call)
 
     assert said == s.NO_KEY, f"{what} answered as though it were set up"
 
 
-def test_the_command_is_not_run_at_all(tmp_path):
+async def test_the_command_is_not_run_at_all(tmp_path):
     """Declining means declining. A tool that ran the command and then said it
     had not would be worse than either answer on its own."""
     proof = tmp_path / "ran"
 
-    s.run(f'touch "{proof}"')
+    await s.run(f'touch "{proof}"')
 
     assert not proof.exists()
 
@@ -88,18 +102,18 @@ def test_peek_still_works_because_it_never_needed_a_model(tmp_path):
     assert said != s.NO_KEY
 
 
-def test_switched_off_on_purpose_is_not_the_same_as_unset(monkeypatch):
+async def test_switched_off_on_purpose_is_not_the_same_as_unset(monkeypatch):
     """`SIFT_NO_MODEL=1` is somebody's decision. The server keeps working, and
     nothing lectures them about a key they chose not to use."""
     monkeypatch.setenv("SIFT_NO_MODEL", "1")
 
-    said = s.run(SAY)
+    said = await s.run(SAY)
 
     assert said != s.NO_KEY
     assert "merhaba" in said
 
 
-def test_a_key_that_exists_is_enough_to_be_set_up(monkeypatch):
+async def test_a_key_that_exists_is_enough_to_be_set_up(monkeypatch):
     """The gate asks whether one was ever provided, not whether it works. A key
     the endpoint refuses is the third rule's problem and falls back; refusing to
     start over it would be this tool deciding it knows better than the endpoint.
@@ -108,13 +122,13 @@ def test_a_key_that_exists_is_enough_to_be_set_up(monkeypatch):
     monkeypatch.setenv("SIFT_BASE_URL", "http://127.0.0.1:1")
     monkeypatch.setenv("SIFT_MODELS", "only-one")
 
-    said = s.run(SAY)
+    said = await s.run(SAY)
 
     assert said != s.NO_KEY
     assert "merhaba" in said
 
 
-def test_an_endpoint_of_your_own_is_enough_to_be_set_up(monkeypatch):
+async def test_an_endpoint_of_your_own_is_enough_to_be_set_up(monkeypatch):
     """Somebody running their own model has finished setting this up.
 
     This gate exists because a machine with no key hands an agent a much worse
@@ -125,7 +139,7 @@ def test_an_endpoint_of_your_own_is_enough_to_be_set_up(monkeypatch):
     monkeypatch.setenv("SIFT_BASE_URL", "http://localhost:11434/v1")
     monkeypatch.setenv("SIFT_MODELS", "qwen3:8b")
 
-    said = s.run(SAY)
+    said = await s.run(SAY)
 
     assert said != s.NO_KEY
     assert "merhaba" in said

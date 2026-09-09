@@ -24,7 +24,9 @@ because the reader is a machine.
 
 from __future__ import annotations
 
+import contextlib
 import time
+from collections.abc import Callable
 
 try:
     from mcp.server.mcpserver import MCPServer
@@ -45,6 +47,8 @@ except ImportError as exc:
     ) from exc
 
 
+import anyio
+from mcp.server.mcpserver import Context
 from mcp.types import ToolAnnotations
 
 from sift import __version__, store
@@ -221,13 +225,14 @@ server = MCPServer(
         "as `keep` and every line containing it comes back whatever else was chosen."
     ),
 )
-def run(
+async def run(
     command: str,
     timeout: float | None = None,
     background: bool = False,
     cwd: str | None = None,
     budget: int | None = None,
     keep: str | None = None,
+    ctx: Context | None = None,
 ) -> str:
     """Run `command` and return the lines that mattered.
 
@@ -255,12 +260,61 @@ def run(
 
     if background:
         return _start(command, timeout, cwd)
-    try:
-        capture = run_command([command], shell=True, timeout=timeout, cwd=cwd)
-    except OSError as exc:
-        return f"sift: {exc}"
-    view, who = best_view(capture, BUDGET if budget is None else budget, keep)
-    return _answer(view.text, footer(capture, view, who))
+
+    def wait_for_it() -> str:
+        try:
+            capture = run_command([command], shell=True, timeout=timeout, cwd=cwd)
+        except OSError as exc:
+            return f"sift: {exc}"
+        view, who = best_view(capture, BUDGET if budget is None else budget, keep)
+        return _answer(view.text, footer(capture, view, who))
+
+    return await _out_loud(wait_for_it, ctx)
+
+
+# How often a command that has not finished yet says that it has not finished.
+#
+# This is not for the reader: nothing arrives in the conversation and nothing is
+# billed, because a progress notification travels beside the result rather than
+# inside it. It is for the client. A ten-minute build is indistinguishable from
+# a hung server over a pipe, and a client watching for silence is entitled to
+# give up on one -- the protocol lets a notification reset that clock, which is
+# the difference between a long command working and a long command timing out.
+#
+# Five seconds is short enough to land inside any reasonable patience and long
+# enough that a command taking an hour sends 720 of these and not 3,600.
+HEARTBEAT_S = 5.0
+
+
+async def _out_loud(work: Callable[[], str], ctx: Context | None) -> str:
+    """Run the blocking work off the loop, saying it is still going while it is.
+
+    Everything about this is arranged so that nothing it does can cost the
+    caller their answer. The work runs in a thread and its result is returned
+    whatever the ticking did; the ticker swallows its own failures; and with no
+    context -- a direct call, a client that never asked -- there is no ticker at
+    all and the work is simply done.
+    """
+    if ctx is None:
+        return work()
+
+    started = time.monotonic()
+
+    async def tick() -> None:
+        while True:
+            await anyio.sleep(HEARTBEAT_S)
+            waited = time.monotonic() - started
+            with contextlib.suppress(Exception):  # a heartbeat cannot cost a result
+                await ctx.report_progress(
+                    waited, None, f"still running, {waited:.0f}s so far"
+                )
+
+    async with anyio.create_task_group() as group:
+        group.start_soon(tick)
+        try:
+            return await anyio.to_thread.run_sync(work)
+        finally:
+            group.cancel_scope.cancel()
 
 
 def _start(command: str, timeout: float | None, cwd: str | None = None) -> str:

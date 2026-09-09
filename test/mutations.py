@@ -819,6 +819,23 @@ MUTATIONS = [
         "    annotations=READS_LOCALLY,",
         '    name="peek",\n    title="Peek at a capture",\n    annotations=READS,',
     ),
+    # -- G4: a command that has not finished says so -------------------------
+    Mutation(
+        "server.py",
+        "a long command tells the client it is still going",
+        "    async with anyio.create_task_group() as group:\n"
+        "        group.start_soon(tick)",
+        "    async with anyio.create_task_group() as group:\n"
+        "        pass\n    if True:",
+    ),
+    Mutation(
+        "server.py",
+        "a heartbeat that fails costs nothing",
+        "            with contextlib.suppress(Exception):"
+        "  # a heartbeat cannot cost a result",
+        "            with contextlib.suppress(ValueError):"
+        "  # a heartbeat cannot cost a result",
+    ),
     # -- Faz 25: offering it, and writing into somebody else's file ----------
     Mutation(
         "hook.py",

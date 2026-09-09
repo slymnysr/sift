@@ -28,7 +28,7 @@ geldiğinde mutasyon bataryasına da bir satır düşer.
 | G1 | Anahtar tek yol olmasın | Kendi uç noktanı gösterdiğinde anahtarsız çalışır | Bugün sift'i denemek için NVIDIA anahtarı şart — benimsemenin önündeki en büyük tek engel | **bitti** |
 | G2 | Araçların künyesi | Yedi araç `annotations` + `title` taşır | `peek` bir dosya okur, `run` rastgele komut çalıştırır; istemci şu an ikisini ayırt edemiyor | **bitti** |
 | G3 | Sonucun içinde veri | — | **Ölçüldü: her sonuca %39,5 token ekliyor.** Reddedildi, gerekçesi yazıldı | **reddedildi** |
-| G4 | Uzun komut sessiz kalmasın | `run` ilerleme bildirir | 5 dakikalık derleme şu an asılı görünüyor | bekliyor |
+| G4 | Uzun komut sessiz kalmasın | `run` ilerleme bildirir | 5 dakikalık derleme şu an asılı görünüyor | **bitti** |
 | G5 | Boru ve modül | `sift digest -`, `python -m sift` | İkisi de Unix'te ve Python'da beklenen yol; ikisi de yok | bekliyor |
 | G6 | Diskin tavanı | Bir yakalamanın yazabileceği bir sınır, ve söylenmiş bir sınır | `sift run -- yes` bugün diski doldurur | bekliyor |
 | G7 | Windows'ta ağacı bitirmek | `stop` orada da başlattığı her şeyi bitirir | README bunu iddia ediyor, Windows'ta sınanmıyor | bekliyor |
