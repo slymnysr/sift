@@ -268,6 +268,49 @@ def test_and_the_test_above_would_have_noticed():
     assert "`sift`) is already installed" in finished.stderr
 
 
+# -- the word a registry entry can spell -------------------------------------
+
+
+def test_the_subcommand_starts_the_same_server(monkeypatch):
+    """`sift mcp` and `sift-mcp` are one server under two names.
+
+    The second name exists because an MCP registry entry can only name the
+    package, and a client turns that name into `uvx --from "sift-cli[mcp]"
+    sift-cli mcp`. A word that a stranger's client types has to reach the same
+    place the documented command does, or the entry is worse than no entry.
+    """
+    from sift import cli
+
+    started = []
+    monkeypatch.setattr(s, "main", lambda: started.append(True))
+
+    assert cli.main(["mcp"]) == 0
+    assert started == [True], "alt komut sunucuyu baslatmadi"
+
+
+def test_the_subcommand_takes_nothing_and_says_so(capsys):
+    """Silence would be worse: a flag that was ignored looks like a flag that worked."""
+    from sift import cli
+
+    assert cli.main(["mcp", "--port", "8080"]) == 2
+    assert "mcp takes no arguments" in capsys.readouterr().err
+
+
+def test_the_subcommand_says_the_same_sentence_when_the_extra_is_missing():
+    """The registry command minus the extra is an ordinary thing to type.
+
+    `uvx sift-cli mcp` -- without `--from "sift-cli[mcp]"` -- installs the
+    command line and nothing else, and this is the path a client takes when it
+    drops the runtime arguments. What comes back has to be the sentence, not a
+    stack: the import lives inside the subcommand for exactly this reason.
+    """
+    finished = _without_mcp("import sift.cli\nsift.cli.main(['mcp'])\n")
+
+    assert finished.returncode != 0
+    assert 'uv tool install "sift-cli[mcp]"' in finished.stderr
+    assert "Traceback" not in finished.stderr
+
+
 # -- over the real transport -------------------------------------------------
 
 SCRIPT = shutil.which("sift-mcp")

@@ -23,6 +23,24 @@ def test_the_published_version_is_the_one_the_package_reports():
     assert veri["project"]["version"] == sift.__version__
 
 
+def test_a_command_is_named_after_the_package_itself():
+    """`uvx sift-cli` has to start something.
+
+    What an MCP registry entry can name is the package, and what `uvx` runs is a
+    command of that same name -- so a client building a command from the entry
+    alone types `sift-cli`, and until this existed it got "an executable named
+    `sift-cli` is not provided by package `sift-cli`". The names differ because
+    `sift` was taken on PyPI, which is nobody's fault and still the user's
+    problem.
+    """
+    veri = tomllib.loads((KOK / "pyproject.toml").read_text(encoding="utf-8"))
+    scripts = veri["project"]["scripts"]
+    ad = veri["project"]["name"]
+
+    assert ad in scripts, f"{ad} adinda bir komut yok; uvx {ad} calismaz"
+    assert scripts[ad] == scripts["sift"], "paketin adi komut satirini baslatmali"
+
+
 def test_notes_and_tests_live_in_their_own_folders():
     """The layout the project promised: notes in notlar/, tests in test/.
 

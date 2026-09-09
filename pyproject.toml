@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sift-cli"
-version = "1.0.1"
+version = "1.0.2"
 description = "Runs your command, then gives the model only the lines that matter."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -30,6 +30,9 @@ mcp = ["mcp>=2"]
 [project.scripts]
 sift = "sift.cli:main"
 sift-mcp = "sift.server:main"
+# The package name, spelled as a command, because that is the only name a
+# registry entry can carry: `uvx <package>` is how a client starts one.
+sift-cli = "sift.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/slymnysr/sift"

@@ -162,6 +162,7 @@ sift outline PATH         what a file declares, without its bodies
 sift digest PATH...       what is in files somebody else produced
 sift peek HANDLE|PATH [FIRST] [LAST]
 sift hook                 answer one shell-command event on stdin
+sift mcp                  speak the protocol on stdin, for a client
 sift tools                which dense tools this machine has
 sift tool NAME [ARGS...]  run one of them, distilled
 sift memory [TERM]        what has been run here before, and how it went
@@ -240,7 +241,10 @@ Without a key the server starts and every tool that would need a model declines
 with an explanation, so the agent falls back to its own shell rather than being
 handed a worse answer it cannot tell apart from a good one.
 
-Any client that speaks stdio will do — the command is `sift-mcp`. It offers
+Any client that speaks stdio will do. The command is `sift-mcp`, and `sift mcp`
+starts the same server — one word for a client that would rather run the package
+by its own name (`uvx --from "sift-cli[mcp]" sift-cli mcp`, which is what the MCP
+registry entry says). It offers
 `run`, `follow`, `outline`, `digest`, `digest_many`, `tool` and `peek`. `list`
 and `stats` are deliberately not offered: they would hand a model every command lately run on this machine,
 including the ones it never asked about, and the person at a terminal already

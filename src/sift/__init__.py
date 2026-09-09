@@ -15,4 +15,4 @@ reply that makes no sense -- each of these falls back to rules that need none of
 them. A tool that drops output to save context has cost more than it saved.
 """
 
-__version__ = "1.0.1"
+__version__ = "1.0.2"

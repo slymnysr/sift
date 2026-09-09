@@ -73,6 +73,7 @@ USAGE = """sift -- run a command, keep every byte, show the lines that matter
   sift hook                           answer one shell-command event on stdin
   sift hook --install [--yes]         route the client's own shell here too
   sift hook --uninstall               and take it back out
+  sift mcp                            speak the protocol on stdin, for a client
   sift tools                          which dense tools this machine has
   sift tool NAME [ARGS...]            run one of them, distilled
   sift memory [TERM] [--here]
@@ -161,6 +162,8 @@ def main(argv: list[str] | None = None) -> int:
         return _list(rest)
     if word == "hook":
         return _hook(rest)
+    if word == "mcp":
+        return _mcp(rest)
     if word == "tools":
         return _tools()
     if word == "tool":
@@ -570,6 +573,29 @@ def _hook(args: list[str]) -> int:
         said = {}
 
     print(json.dumps(said, ensure_ascii=False))
+    return 0
+
+
+def _mcp(args: list[str]) -> int:
+    """Speak the protocol on stdin -- the same server `sift-mcp` starts.
+
+    Two names for one server looks like waste until you try to write down how a
+    stranger's client should start it. What a registry entry can name is the
+    package, and the package is `sift-cli`; what `uvx` runs is a command of that
+    same name. So `uvx --from "sift-cli[mcp]" sift-cli mcp` is a line anyone can
+    build from the entry alone, and it needs this word to exist.
+
+    The import is here rather than at the top because the whole point of the
+    extra is that the command line works without it. Somebody who never
+    installed `mcp` gets the sentence `sift.server` raises, not a traceback.
+    """
+    if args:
+        print(f"sift: mcp takes no arguments\n\n{USAGE}", file=sys.stderr)
+        return 2
+
+    from sift.server import main as serve
+
+    serve()
     return 0
 
 

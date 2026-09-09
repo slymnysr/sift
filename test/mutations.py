@@ -1255,6 +1255,13 @@ MUTATIONS = [
         "    if not wanted():\n        return PASS",
         "    if False:\n        return PASS",
     ),
+    # -- T1/T2: the word a registry entry can spell ----------------------------
+    Mutation(
+        "cli.py",
+        "the server can be started by the package's own name",
+        '    if word == "mcp":\n        return _mcp(rest)\n',
+        "",
+    ),
 ]
 
 
