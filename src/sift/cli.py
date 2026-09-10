@@ -121,7 +121,7 @@ NO_KEY = """\
 │                                                                      │
 │  Running your own model? Then no key is wanted, only an address:     │
 │      export SIFT_BASE_URL=http://localhost:11434/v1                  │
-│      export SIFT_MODELS=qwen3:8b                                     │
+│      export SIFT_MODELS=the-model-your-server-uses                   │
 │                                                                      │
 │  Meant to run without a model? SIFT_NO_MODEL=1 says so, and silences │
 │  this.                                                               │

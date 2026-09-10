@@ -363,8 +363,8 @@ changes; the endpoint is asked the ordinary OpenAI-shaped way, and no
 `Authorization` header is sent when there is no key to put in it.
 
 ```bash
-export SIFT_BASE_URL=http://localhost:11434/v1   # Ollama
-export SIFT_MODELS=qwen3:8b                      # what to ask, best first
+export SIFT_BASE_URL=http://localhost:11434/v1   # Ollama's own port
+export SIFT_MODELS=the-model-you-pulled          # whatever that server calls it
 ```
 
 The same two lines fit llama.cpp (`--api`), vLLM, LM Studio, LocalAI, a company
@@ -375,10 +375,12 @@ An address you typed is treated as a decision: nothing warns you about a missing
 key, and the MCP server does not decline. What that endpoint wants for
 credentials is between you and it.
 
-> Tested here as a shape rather than as a list: the suite proves that an
-> endpoint of your own is asked, and asked without a key. Which local servers
-> answer *well* is a question about the model you run, and the corpus in
-> `test/budget.py` is how you can settle it for yours.
+> No model is named above on purpose. Tested here as a shape rather than as a
+> list: the suite proves that an endpoint of your own is asked, and asked
+> without a key. Which local model answers *well* has not been measured here,
+> and naming one would be a recommendation nobody earned — the corpus in
+> `test/budget.py` is how you settle it for yours, on the output you actually
+> run.
 
 #### Without either of them
 
