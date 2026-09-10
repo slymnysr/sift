@@ -3,7 +3,7 @@
 Bu dosya İŞ 1'in hafızası. Her yeni bulgu, her ret, her ölçüm buraya yazılır.
 Amacı altı ay sonra "bunu denemiş miydik" sorusunu cevaplamak.
 
-**Son güncelleme:** 10 Eylül 2026 (bir gün sonra kontrol; 13 Eylül için bulut rutini kuruldu)
+**Son güncelleme:** 11 Eylül 2026 (bulut rutini denendi, ağ çıkışı kapalı çıktı, kapatıldı)
 
 ---
 
@@ -328,12 +328,41 @@ kullanıcı hâlâ ölçülebilir değil.** Bir günlük bir pakette beklenen bu
 - awesome-mcp-servers PR #14050 — birleşti mi
 - PyPI indirme sayısı (`pypistats`), GitHub yıldız
 
-Bu kontrol **kurulu**: `trig_01BwSMKGj6ZB5PAyv2JvmNhB` adlı bulut rutini
-13 Eylül 09:07'de (Istanbul) bir kez çalışıp dokuz kanalı ölçecek ve 10 Eylül
-taban çizgisiyle karşılaştıracak. Depo erişimi yok — GitHub hesabı bulut
-tarafına bağlı değil — o yüzden sonucu buraya yerel oturum işleyecek; rutin
-kopyalanabilir bir Markdown bloğu üretiyor.
-https://claude.ai/code/routines/trig_01BwSMKGj6ZB5PAyv2JvmNhB
+### Denendi ve olmadı: bulut rutini bu işi yapamıyor
+
+10 Eylül'de bu kontrolü bir bulut rutinine bağladım
+(`trig_01BwSMKGj6ZB5PAyv2JvmNhB`). **Çalışmadı, ve sebebi ölçüldü.**
+
+Rutin 13 Eylül'e kurulmuştu; **10 Eylül 21:42'de** koştu — neden erken
+tetiklendiğini bilmiyorum. Asıl mesele o değil. Koşunun kendi çıktısı:
+
+```
+Glama            HTTP:000     (bağlantı hiç kurulamadı)
+PulseMCP         HTTP:000
+pypistats        HTTP:000
+Smithery         HTTP:000
+api.github.com   HTTP:403
+github.com/mcp   HTTP:403
+kayıt defteri    HTTP:200     ← dokuzda tek çalışan
+```
+
+Beş ayrı sunucuya `000` dönerken birine 200 dönmesi geçici bir arıza değil:
+**bulut kumbarasının ağ çıkışında bir izin listesi var** ve içinde yalnız
+`registry.modelcontextprotocol.io` var. Koşu da orada takıldı; son olayından 12
+saat sonra hâlâ "running" görünüyordu.
+
+Ayrıca depo erişimi de yoktu: GitHub hesabı bulut tarafına bağlı olmadığı için
+`sources` içeren rutin **401** ile reddedilmişti, o yüzden zaten deposuz
+kurulmuştu.
+
+**Sonuç:** rutin kapatıldı (`enabled: false`). Bu ölçüm **yerel oturumda**
+yapılacak — dokuz kanalın dokuzu da buradan okunabiliyor, ve 9/10 Eylül
+kontrolleri zaten öyle yapıldı.
+
+**Genel ders:** bulut rutini dış dünyayı ölçmek için değil, kendi deposunda iş
+yapmak için uygun. Ölçüm işini oraya vermeden önce o kumbaranın neye
+ulaşabildiğini sınamak gerekiyor — burada bir gün kaybedilmedi çünkü rutin
+erken koştu ve kendini ele verdi.
 
 ---
 
