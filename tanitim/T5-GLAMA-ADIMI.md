@@ -1,62 +1,66 @@
-# T5 ek adımı — Glama, ve neden bir Dockerfile
+# T5 ek adımı — Glama, ve gerekmediği anlaşılan bir Dockerfile
 
-**Tarih:** 10 Eylül 2026 · **Durum:** hazır, son adım kullanıcının
+**Tarih:** 10 Eylül 2026 · **Durum:** bitti, hiçbir gönderim yapılmadan
 
-## Ne oldu
+## Robotun şartı
 
 awesome-mcp-servers PR'ı ([#14050](https://github.com/punkpeye/awesome-mcp-servers/pull/14050))
-açıldıktan sonra deponun robotu bir şart koydu:
+açıldıktan sonra deponun robotu iki şey istedi:
 
 > 1. **Ensure your server is listed on Glama.** ... you must add Dockerfile
 >    directly to Glama. For checks to pass, we only need the server to start and
 >    respond to introspection requests.
 > 2. **Update your PR** by adding a Glama score badge after the server description.
 
-Yani T5 artık T4'ün bir parçasına bağımlı: **Glama listesi olmadan PR
-birleşmiyor.**
+## Yaptığım fazladan iş
 
-## Docker kararı: elenen soru bu değildi
+Birinci şartı okuyup Glama'ya elle gönderim yapılacağını varsaydım. Bir
+`Dockerfile` yazdım, depo kökü yerine `tanitim/`'e koydum (kökte durursa
+"sift'i konteynerde çalıştır" daveti gibi okunur, ve orada çalıştırmak aracın
+yanlış makinenin çıktısını vermesinin tek yolu), `SIFT_NO_MODEL=1` ekledim, ve
+konteynersiz doğrulayabildiğim kadarını doğruladım.
 
-`gelistirme/BULGULAR.md` §C'de Docker imajı elenmişti. Oradaki gerekçe
-**dağıtım** hakkındaydı ve aynen duruyor:
+**Hiçbirine gerek yoktu.**
 
-> sift'in işi *bu* makinedeki komutu çalıştırmak; konteynerde yanlış makinenin
-> çıktısını verir.
+## Olan şey
 
-Glama'nın istediği dağıtım değil, bir **duman testi**: sunucu ayağa kalkıyor ve
-`tools/list`'e cevap veriyor mu. İkisi farklı sorular, ve ikincisine "evet"
-demek birincisini geri almıyor.
-
-Bu yüzden `Dockerfile` deponun kökünde değil, **burada** duruyor. README'nin
-yanında bir `Dockerfile`, "sift'i konteynerde çalıştır" daveti gibi okunur — ve
-orada çalıştırmak, aracın yanlış soruyu cevaplamasının tek yolu. Dosyanın kendi
-başlığı da bunu söylüyor.
-
-İmaj ayrıca `SIFT_NO_MODEL=1` taşıyor: denetçinin kumbarasında sorulacak bir
-model yok zaten, ve bu hâliyle imaj yanlışlıkla bir anahtar verilse bile ağa
-çıkamaz.
-
-## Doğrulanan ve doğrulanmayan
-
-**Doğrulandı** (10 Eylül, bu makinede): PyPI'dan taze kurulmuş `sift-cli[mcp]`,
-anahtarsız ve `SIFT_NO_MODEL=1` iken ayağa kalkıyor ve `tools/list`'e yedi aracı
-künyeleriyle döndürüyor. Yani Glama'nın istediği davranış var.
-
-**Doğrulanmadı:** imajın kendisi. Docker Desktop bu makinede kurulu ama bu WSL
-dağıtımına bağlı değil (`docker` komutu yok). Yani `FROM python:3.13-slim` +
-`pip install` katmanı sınanmadı — sınanan şey, o katmanın içinde koşacak olan
-program.
-
-## Kalan adım — tarayıcı gerektiriyor
-
-1. <https://glama.ai/mcp/servers> → sunucu ekle, **GitHub OAuth** ile giriş
-   (Glama, listeleyenin depoya yazma yetkisi olduğunu böyle doğruluyor)
-2. `tanitim/Dockerfile`'ın içeriğini Glama'nın istediği yere yapıştır
-3. Denetim geçtikten sonra PR'a puan rozeti satırı eklenecek:
+Kullanıcı Glama'ya girdiğinde karşısına çıkan seçenekler benim tarif ettiklerim
+değildi. Bakınca sebebi görüldü: **sift Glama'da çoktan listelenmişti.**
 
 ```
-[![OWNER/REPO MCP server](https://glama.ai/mcp/servers/OWNER/REPO/badges/score.svg)](https://glama.ai/mcp/servers/OWNER/REPO)
+https://glama.ai/mcp/servers/slymnysr/sift
+kalite: A · bakım: A · kategori: Command Line · lisans: MIT
 ```
 
-`OWNER/REPO` Glama'nın verdiği yol; listeleme yapılmadan bilinmiyor, o yüzden
-şimdiden yazılmadı.
+Sebep `ARASTIRMA.md`'de zaten yazılıydı ve ben onu bu adımda kullanmayı
+akıl etmedim: **Glama kendini resmî kayıt defterinin üst kümesi ilan ediyor**
+(*"Glama ingests and re-publishes everything in the official registry"*). T2'de
+`io.github.slymnysr/sift` kayıt defterine girdiği için Glama onu kendiliğinden
+almış — gönderim yok, OAuth yok, Dockerfile yok.
+
+Dockerfile silindi. Gereksiz bir dosyayı "zararı yok" diye bırakmak, onu yazma
+gerekçesiyle çelişirdi: o dosyanın kendi başlığı, var olma sebebinin tek bir
+denetim olduğunu söylüyordu. O denetim hiç sorulmadı.
+
+## T4'ün tezi ölçüldü
+
+T4 şunu iddia etmişti: *"T2'yi yapmak T4'ün dörtte üçünü de yapar, çünkü
+dizinler resmî kayıttan besleniyor."* O gün bu bir okumaydı; şimdi **ölçüm**:
+
+| dizin | ne oldu | süre |
+|---|---|---|
+| **Glama** | Kendiliğinden listeledi, A/A puanladı | ~1 gün |
+| PulseMCP | Gönderim durdurulmuş, kayıttan alacağını söylüyor | bekliyor |
+| Smithery | Alt kayıt defteri | bekliyor |
+| mcp.so | Elle gönderim gerekti (issue #4010) | açık |
+
+## Rozet
+
+Girdiye eklendi, deponun kendi biçimine uyarak depo bağlantısının hemen ardına:
+
+```
+[![slymnysr/sift MCP server](https://glama.ai/mcp/servers/slymnysr/sift/badges/score.svg)](https://glama.ai/mcp/servers/slymnysr/sift)
+```
+
+PR `MERGEABLE` durumda ve iki şartın ikisi de karşılandı; kalan tek şey
+bakımcının birleştirmesi.

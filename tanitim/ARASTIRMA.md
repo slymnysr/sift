@@ -235,7 +235,7 @@ değil, bir taban çizgisi.
 | mcp.so [#4010](https://github.com/chatmcp/mcpso/issues/4010) | Açık, bakım cevabı yok | Tek yorum bizim düzeltmemiz |
 | awesome-mcp-servers [#14050](https://github.com/punkpeye/awesome-mcp-servers/pull/14050) | **Açık ve engellenmiş** | Aşağıda |
 | PulseMCP API | `sift` dönmüyor | Gönderim zaten durdurulmuş |
-| Glama | **API anahtarı istiyor** | Programla bakılamıyor |
+| Glama | **listelendi: A/A** | 10 Eylül'de görüldü; hiçbir gönderim yapılmadı — kayıt defterinden geldi |
 | `github.com/mcp` | Sayfa JavaScript'le çiziliyor | Buradan doğrulanamadı |
 
 ### "83 indirme" ne değil
@@ -282,7 +282,13 @@ konteynerde yanlış makinenin çıktısını verir"). Glama'nınki dağıtım d
 duman testi: sunucu ayağa kalkıyor ve `tools/list`'e cevap veriyor mu. İkisi
 farklı sorular, ve ikincisine "evet" demek birincisini geri almıyor.
 
-**Yapılmadı.** İkisi de kullanıcının tarayıcısını ve kararını istiyor.
+**Sonra ne oldu (10 Eylül):** ikisine de gerek kalmadı. Glama sift'i
+kendiliğinden listeledi — `glama.ai/mcp/servers/slymnysr/sift`, kalite A, bakım
+A — çünkü kendini resmî kayıt defterinin üst kümesi ilan ediyor ve T2 onu oraya
+koymuştu. Rozet PR'a eklendi, iki şart da karşılandı, Dockerfile silindi.
+
+**Ölçülmüş sonuç:** T4'ün tezi ("dizinler kayıttan besleniyor, T2 işi yapar")
+en az bir dizin için **~1 günde** doğrulandı. Ayrıntı: `T5-GLAMA-ADIMI.md`.
 
 ### 13 Eylül 2026'da bakılacaklar
 
