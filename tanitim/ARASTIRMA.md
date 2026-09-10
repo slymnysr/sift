@@ -3,7 +3,7 @@
 Bu dosya İŞ 1'in hafızası. Her yeni bulgu, her ret, her ölçüm buraya yazılır.
 Amacı altı ay sonra "bunu denemiş miydik" sorusunu cevaplamak.
 
-**Son güncelleme:** 9 Eylül 2026 akşamı (İŞ2 biterken erken kontrol)
+**Son güncelleme:** 10 Eylül 2026 (bir gün sonra kontrol; 13 Eylül için bulut rutini kuruldu)
 
 ---
 
@@ -290,6 +290,36 @@ koymuştu. Rozet PR'a eklendi, iki şart da karşılandı, Dockerfile silindi.
 **Ölçülmüş sonuç:** T4'ün tezi ("dizinler kayıttan besleniyor, T2 işi yapar")
 en az bir dizin için **~1 günde** doğrulandı. Ayrıntı: `T5-GLAMA-ADIMI.md`.
 
+### 10 Eylül kontrolü — bir gün sonra
+
+| kanal | 9 Eylül | 10 Eylül |
+|---|---|---|
+| Kayıt defteri | 1.1.0 · active · isLatest | değişmedi |
+| **Glama** | listelendi, A/A | değişmedi — rozet PR'a eklendi |
+| Smithery | yok | **yok** (arama `SiftDB` ve `BirdSift` döndürüyor, bizimki değil) |
+| PulseMCP | yok | **yok** — gönderim durdurulmuş, beklenen bu |
+| `github.com/mcp` | okunamadı | **okunamadı** (sayfa JavaScript'le çiziliyor) |
+| GitHub | 0 yıldız | **0 yıldız, 0 fork** |
+| mcp.so #4010 | açık, cevap yok | **açık**, cevap yok |
+| awesome #14050 | açık, engellenmiş | **açık, `MERGEABLE`** — iki şart karşılandı |
+| PyPI (aynasız toplam) | 83 | **434** |
+| PyPI (kurucudan gelen) | 8 | **119** |
+
+**PyPI'daki artışı okumanın doğru yolu.** 434'ün 315'i Python sürümü
+bildirmiyor: bot, tarayıcı, ayna. Kalan 119'un dağılımı:
+
+```
+3.12: 84   3.11: 14   3.13: 13   3.14: 4   3.9: 4
+```
+
+Paket **Python >=3.12** istiyor. Yani `3.9` ve `3.11`'den gelen **18 istek hiç
+kuramaz** — onlar da kullanıcı değil, sürüm çözen otomatlar. Geriye en fazla 101
+kalıyor, ve onun bir kısmı da bizim: bugün Glama doğrulaması ve kayıt defteri
+komutu için bu makineden `uvx` çalıştırıldı (Linux, 3.12/3.13).
+
+Dürüst özet: 1.1.0 yayınlandı, bir dizin (Glama) kendiliğinden aldı, **gerçek
+kullanıcı hâlâ ölçülebilir değil.** Bir günlük bir pakette beklenen bu.
+
 ### 13 Eylül 2026'da bakılacaklar
 
 - `github.com/mcp` — sift göründü mü
@@ -297,6 +327,13 @@ en az bir dizin için **~1 günde** doğrulandı. Ayrıntı: `T5-GLAMA-ADIMI.md`
 - mcp.so issue #4010 — cevap/kabul
 - awesome-mcp-servers PR #14050 — birleşti mi
 - PyPI indirme sayısı (`pypistats`), GitHub yıldız
+
+Bu kontrol **kurulu**: `trig_01BwSMKGj6ZB5PAyv2JvmNhB` adlı bulut rutini
+13 Eylül 09:07'de (Istanbul) bir kez çalışıp dokuz kanalı ölçecek ve 10 Eylül
+taban çizgisiyle karşılaştıracak. Depo erişimi yok — GitHub hesabı bulut
+tarafına bağlı değil — o yüzden sonucu buraya yerel oturum işleyecek; rutin
+kopyalanabilir bir Markdown bloğu üretiyor.
+https://claude.ai/code/routines/trig_01BwSMKGj6ZB5PAyv2JvmNhB
 
 ---
 
