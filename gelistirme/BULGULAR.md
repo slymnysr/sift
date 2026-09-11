@@ -290,3 +290,90 @@ konusunda yanılabilir, ve atılanı `peek` geri getirir.
 - İncelenebilir: kısa çıktıda hook'un gerçekten model çağrısı yapmadığı
   doğrulanmalı. Docstring *"twelve lines in, twelve lines out"* diyor; bu
   ölçülmedi.
+
+
+---
+
+# E. "Kısa mı uzun mu" sorusu — üç yerde birbiriyle çelişiyor
+
+Kullanıcının 11 Eylül'de sorduğu soru: *"sift 'uzun çıktı olacaksa beni kullan'
+diyor, ama bunu tahmin etmek çalıştırmakla aynı şey. Modele bunu sorması saçma
+olabilir."* Doğru soru, ve kodda üç ayrı yerde üç ayrı cevabı var.
+
+## E1. MCP talimatı bir tahmin istiyor
+
+`server.py`:
+
+> Use `run` in place of a plain shell tool whenever a command **may print** more
+> than a few dozen lines.
+
+Yani ajandan **komut çalışmadan önce** karar vermesi isteniyor.
+
+## E2. Kanca bunun bilinemez olduğunu söylüyor
+
+`hook.py`, aynı projede, aynı soruya:
+
+> **how much a command prints is not knowable before it runs.**
+
+Bu bir inanç çelişkisi değil, **iki farklı kaldıraç**: MCP sunucusu hiçbir şeyi
+kesemez, yalnız çağrıldığında çalışır — o yüzden tahmin istemek zorunda. Kanca
+her komutu gördüğü için tahmine ihtiyaç duymuyor. Yani MCP talimatı **ikinci en
+iyi** mekanizma ve zayıflığı tam olarak kancanın var olma sebebi.
+
+## E3. Ama kanca da bedeli hafife alıyor — ölçüldü
+
+`hook.py` şunu iddia ediyor:
+
+> Routing everything **costs nothing**, because a view of a short output *is*
+> that output: twelve lines in, twelve lines out.
+
+**İlk yarısı doğru, ikincisi değil.** Kodda doğrulandı (11 Eylül):
+
+- `hook.answer()` komutu çalıştırıp **koşulsuz** `best_view(capture)` çağırıyor.
+  Çıktı boyutuna bakan bir kapı yok.
+- `distill.select()` içinde de kestirme yok: tek kontrol `if not lines`.
+  12 satır, `BUDGET=120` ile bile modele sorulur.
+
+Yani "twelve lines in, twelve lines out" **gösterilen** hakkında doğru (hiçbir
+şey saklanmıyor), **maliyet** hakkında yanlış: bir istek harcanıyor. Ölçülmüş
+gecikme: `super` basamağı ~6 sn, tam efor ~15 sn.
+
+Sonucu şu: **kanca kuruluysa `git status`, `ls`, `git rev-parse HEAD` — her kabuk
+çağrısı 6-15 saniye bekliyor**, üç satırdan hangisinin önemli olduğunu sormak
+için. Bağlama bir şey eklemiyor (istek NVIDIA'ya gidiyor, konuşmaya değil) ama
+**zaman ve kota** harcıyor.
+
+> 22. fazın yanıt önbelleği bunu yumuşatıyor: aynı baytlar için ikinci kez
+> sorulmuyor. Ama ilk çağrıyı kurtarmıyor, ve kabuk çıktıları genelde birbirinin
+> tam kopyası olmuyor (zaman damgası, süre, sıra).
+
+## E4. Asıl tasarım cevabı: kapı çalıştırmadan sonra, sormadan önce
+
+Tahmin problemi **komutu kendin çalıştırdığın anda kayboluyor** — ki sift zaten
+çalıştırıyor. O yüzden doğru yer ikisinin arası:
+
+```
+komutu çalıştır        (yerel, ucuz)
+çıktı yeterince kısaysa → olduğu gibi döndür, SORMA
+değilse               → sor
+```
+
+**Ama eşik `budget` olamaz**, ve bu ince yer: 40 satırlık bir çıktıda her satır
+bütçeye sığsa bile model 3 satır seçebilir ve görünüm 3 satır + boşluk olur —
+bu 40 satır göstermekten iyidir. Yani "sığıyorsa hepsini göster" davranışı
+değiştirir, iyileştirmez.
+
+Gereken şey ayrı bir **taban**: "sormaya değmeyecek kadar kısa". N satırın
+altında kazanç en fazla N satır olabilir, ve karşılığında 6-15 saniye ödenir.
+
+**Ölçülmesi gereken:** o N kaç. Bunu tahminle koymak bu projenin kuralına
+aykırı. Korpus elde var (`test/budget.py`, 22 örnek) ama hepsi uzun çıktı;
+kısa-çıktı tarafı için yeni bir ölçüm gerekiyor — çeşitli uzunluklarda gerçek
+kabuk çıktılarında "modelin gizlediği satır sayısı" ile "beklenen saniye"
+yan yana konmalı.
+
+## E5. Bu bulgunun bir yan etkisi: iki tavsiyem geri alındı
+
+Bu oturumda `sift hook --install`'ı **iki kez** önerdim ve ikisinde de yukarıdaki
+maliyeti bilmiyordum. Öneri şu hâliyle eksikti: kanca kurulunca her `ls` 6-15
+saniye sürer. E4'teki kapı konmadan kancayı önermek doğru değil.
