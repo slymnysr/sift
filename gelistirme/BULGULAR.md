@@ -217,6 +217,27 @@ sift'te bu üçü olmazdı: ham çıktı diskte kalır, seçim içeriğe bakıla
 `peek` atılanı geri getirir. **Elle filtre kör ve geri alınamaz; sift'in seçimi
 gören ve geri alınabilir.**
 
+### Yanlış okunmaması için: bu bir token iddiası değil
+
+`grep`/`head` kabukta çalışıyor, yani elenen satırlar bağlama **hiç girmiyor**.
+Ajan onların token'ını ödemiyor. Dolayısıyla **doğru tahmin edilen tek bir
+denemede boru ile sift maliyet olarak eşittir** — hatta sift bir model çağrısı
+eklediği için pahalıdır.
+
+Yukarıdaki üç vakanın bedeli elenen çıktı değil, **fazladan tur**: her yeniden
+çekim, bütün konuşmanın yeniden gönderilmesi demek. Bu oturumda bağlam ~732 bin
+token olduğu için bir tur, önbellekli hâliyle bile ~73 bin token'lık bir yüke
+denk geliyordu.
+
+sift'in `grep` karşısındaki iddiası bu yüzden tasarruf değil, üç başka şey:
+
+1. **Tahmin gerekmiyor.** `grep -iE "FAILED|assert|Error"` uydurulmuş bir desen;
+   hata o kelimeleri içermiyorsa boş döner, ve boş dönmesi "hata yok" ile aynı
+   görünür.
+2. **Gösterilmeyen geri gelir** — komutu yeniden çalıştırmadan.
+3. **Yeniden çalıştırmak aynı şeyi vermeyebilir.** Sabit bir log okunuyorsa
+   şans; bir derleme ya da test tekrar koşturulduğunda hata hiç tekrarlamayabilir.
+
 ## D2. `MUST` eklenmesin — gerekçe projenin kendi içinde yazılı
 
 Karşılaştırma için: `context7` araç açıklamasında **MUST** kullanıyor
