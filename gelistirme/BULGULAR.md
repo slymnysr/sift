@@ -176,3 +176,96 @@ değil, **bir koşulu düzeltmek**.
 | **Docker imajı** | sift'in işi *bu* makinedeki komutu çalıştırmak; konteynerde yanlış makinenin çıktısını verir |
 | **Kendi modelini eğitmek / ince ayar** | Projenin tek cümlelik ekonomisi "ücretsiz olanı çalıştır"; eğitim onu bozar |
 | **Sorunun cevabını akıtmak (streaming)** | Cevap zaten yalnız satır numaraları — birkaç düzine token. Akıtacak bir şey yok |
+
+
+---
+
+# D. Sonradan eklenen bulgu — 11 Eylül 2026
+
+Bu bölüm plan yazıldıktan sonra eklendi. Kaynağı bir ölçüm değil, **bir oturumun
+kendisi**: sift'in tasarlandığı ajan (bu oturumdaki Claude) üç gün boyunca sift
+ile çalıştı ve nasıl davrandığı gözlemlendi. Böyle bir veri nadir, o yüzden
+yazıldı.
+
+## D1. Sunucu talimatı kendini uygulatmıyor — ölçülmüş vaka
+
+`server.py`'nin `INSTRUCTIONS` metni şunu diyor:
+
+> Use `run` in place of a plain shell tool whenever a command may print more
+> than a few dozen lines.
+
+**Bu oturumda sift'in MCP araçları bir kez bile çağrılmadı.** Talimat bağlamda
+duruyordu, araçlar yüklü ve görünürdü, ajan yine de her seferinde Bash'e gitti.
+
+Sebep ajanın ihmali değil, **seçimin biçimi**: Bash her işe uyuyor ve
+düşünmeden uzanılıyor; özel araç fark edilmeyi, tartılmayı ve çağrılmayı
+istiyor. Tek bir kararın içinden bakınca özel araç bir maliyet gibi görünüyor.
+
+### Bedeli ölçüldü: üç kez yeniden çekim
+
+Ajan sift'in işini elle yaptı — ama **yanlış uçtan**. Her Bash çağrısı
+`| tail -3`, `| head -20`, `| grep -E …` ile bitti. Yani seçim **çıktı
+görülmeden** yapıldı, ve seçilmeyen kayboldu:
+
+| ne oldu | bedeli |
+|---|---|
+| CI hatası `grep -iE "FAILED\|assert\|Error"` ile arandı, desen yetmedi | **İkinci çekim** gerekti |
+| Batarya logunun üstünden dört ayrı `grep`/`tail` geçti | Dört geçiş, tek dosya |
+| `pytest \| tail -3` özeti verdi, kırılan testi göstermedi | Tekrar bakıldı |
+
+sift'te bu üçü olmazdı: ham çıktı diskte kalır, seçim içeriğe bakılarak yapılır,
+`peek` atılanı geri getirir. **Elle filtre kör ve geri alınamaz; sift'in seçimi
+gören ve geri alınabilir.**
+
+## D2. `MUST` eklenmesin — gerekçe projenin kendi içinde yazılı
+
+Karşılaştırma için: `context7` araç açıklamasında **MUST** kullanıyor
+(*"You MUST call resolve-library-id before get-library-docs"*) ve işliyor,
+çünkü orada **prosedürel bir bağ** var — atlarsan geçerli kimlik olmaz, araç
+hata verir. Kural sınanabilir.
+
+"Bash yerine sift kullan" ise bir **yargı sınırı**, ve `hook.py`'nin ilk
+paragrafı bu sınıfı zaten reddetmiş:
+
+> A list of commands worth intercepting is a list of tools wearing a disguise…
+> And it cannot be right in principle — **how much a command prints is not
+> knowable before it runs.**
+
+MUST, o reddedilen şeyin bir kat üstü: ajandan komut çalışmadan önce karar
+vermesini istiyor. Üstelik `git rev-parse HEAD` için apaçık yanlış, ve bazı
+yerde apaçık yanlış olan mutlak bir kural haklı olduğu yerlerde de ıskartaya
+çıkıyor.
+
+## D3. Asıl mesele: okunan şey zaten ödenmiştir
+
+Bu oturumda ortaya çıkan en keskin cümle, aracın niye var olduğunu da
+açıklıyor.
+
+Bir ajanın "çıktıyı kendim özetliyorum" demesi **maliyet açısından bir
+yanılsama**. Okuduğu her şey o anda bağlama girmiştir ve ödenmiştir; üstüne
+özet yazmak toplamı **artırır**, çünkü ham çıktı hâlâ oradadır ve sonraki her
+turda yeniden gönderilir. Bir ajan **okuduğu şeyi geri alamaz.**
+
+Maliyeti gerçekten düşüren iki şey var:
+
+1. **İçeri hiç almamak** — `tail`/`grep` ile önceden kesmek. Kör ve geri
+   alınamaz (D1).
+2. **Konuşmanın dışındaki bir şeyin okuyup yalnız seçimi içeri vermesi** —
+   sift. Ham bayt transkripte hiç girmez.
+
+İkinci fark ise doğrulukta: ajanın yaptığı **özet**, yani uydurulmuş metin ve
+içeriği hakkında yanlış olabilir. sift'in yaptığı **seçim**: satırı yazmıyor,
+seçiyor, o yüzden ne dediği konusunda yanılamaz — yalnız neyin önemli olduğu
+konusunda yanılabilir, ve atılanı `peek` geri getirir.
+
+## D4. Bundan çıkan iş (yapılmadı, karar bekliyor)
+
+- **`sift hook --install`** bu bulgunun doğal sonucu ve 18. faz zaten bunun
+  için yazılmış: hatırlamaya hiç sormuyor. Bu oturumda kurulsaydı üç yeniden
+  çekim olmayacaktı.
+- Alternatif ve daha zayıfı: kullanıcının `CLAUDE.md`'sine bir satır —
+  kullanıcının kuralları sunucunun talimatından daha ağır basıyor.
+- **`MUST` eklenmesin** (D2).
+- İncelenebilir: kısa çıktıda hook'un gerçekten model çağrısı yapmadığı
+  doğrulanmalı. Docstring *"twelve lines in, twelve lines out"* diyor; bu
+  ölçülmedi.
